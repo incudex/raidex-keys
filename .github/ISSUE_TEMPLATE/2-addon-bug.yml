@@ -1,0 +1,77 @@
+name: Fehler im Addon · Bug in the addon
+description: Das WoW-Addon Raidex Keys meldet einen Fehler oder speichert Falsches · The WoW addon throws errors or records wrong data
+labels:
+  - bug
+  - addon
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Deutsch oder Englisch – beides ist willkommen. · German or English, both are welcome.
+
+        Die App zeigt etwas falsch an und du weißt nicht, woran es liegt? Dann nimm lieber „Fehler in der App“.
+        The app shows something wrong and you don't know why? Then “Bug in the app” is the better form.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Was ist passiert? · What happened?
+      description: Das beobachtete Verhalten in ein, zwei Sätzen. · What you saw, in a sentence or two.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Was hättest du erwartet? · What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Nachstellen · Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+
+  - type: input
+    id: version
+    attributes:
+      label: Addon-Version · Addon version
+      description: Steht unter Optionen → AddOns → Raidex Keys. · See Options → AddOns → Raidex Keys.
+      placeholder: "0.1.8 (Build 42)"
+    validations:
+      required: true
+
+  - type: input
+    id: game
+    attributes:
+      label: Spielversion und Region · Game version and region
+      placeholder: "12.0.7, EU"
+
+  - type: input
+    id: addons
+    attributes:
+      label: Andere Addons mit Keystone-Bezug · Other keystone-related addons
+      description: BigWigs, Key Master, Mythic Dungeon Tools … – sie tauschen Keys über dasselbe Protokoll aus. · They exchange keys over the same protocol.
+
+  - type: textarea
+    id: lua-error
+    attributes:
+      label: Lua-Fehler · Lua error
+      description: Die komplette Meldung, zum Beispiel aus BugSack. · The full message, for example from BugSack.
+      render: text
+
+  - type: textarea
+    id: debug
+    attributes:
+      label: Ausgabe von /rk debug · Output of /rk debug
+      render: text
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Screenshots, weiterer Kontext · Screenshots, more context
+      description: Bilder kannst du einfach hineinziehen. · Drag images in here.

@@ -1,0 +1,24 @@
+## Interface: 120100, 120007
+## Title: |cffA78BFFRaidex|r Keys
+## Notes: Keystones of all your characters and your guild - for the Raidex Keys desktop app.
+## Notes-deDE: Keystones aller Twinks und deiner Gilde - für die Desktop-App Raidex Keys.
+## Author: Lars Gossard
+## Version: 0.1.9
+## X-Build: 101
+## X-Email: raidex@incudex.de
+## X-Website: https://raidex.app/keys/
+## X-License: GPL-3.0-or-later
+## IconTexture: Interface\AddOns\RaidexKeys\Media\Icon
+## SavedVariables: RaidexKeysDB
+
+Locales\Locale.lua
+Locales\deDE.lua
+
+Core\Addon.lua
+Core\Database.lua
+Core\Snapshot.lua
+Core\Exchange.lua
+
+UI\Options.xml
+UI\Options.lua
+UI\MinimapButton.lua

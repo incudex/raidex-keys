@@ -1,0 +1,32 @@
+name: Idee oder Wunsch · Idea or request
+description: Etwas fehlt oder könnte besser sein · Something is missing or could be better
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: Deutsch oder Englisch – beides ist willkommen. · German or English, both are welcome.
+
+  - type: dropdown
+    id: part
+    attributes:
+      label: Betrifft · Concerns
+      options:
+        - App
+        - Addon
+        - Beides · Both
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: Was wünschst du dir? · What would you like?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Wofür brauchst du es? · What would you use it for?
+      description: Die Situation im Spiel oder in der Woche, in der es dir fehlt. · The situation in game or in your week where it is missing.

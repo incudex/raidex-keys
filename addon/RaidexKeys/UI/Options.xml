@@ -1,0 +1,14 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/">
+    <Frame name="RaidexKeysAboutTemplate" mixin="RaidexKeysAboutMixin" virtual="true">
+        <Size y="45"/>
+        <Layers>
+            <Layer level="OVERLAY">
+                <FontString parentKey="Text" inherits="GameFontHighlight" justifyH="LEFT" justifyV="TOP">
+                    <Anchors>
+                        <Anchor point="TOPLEFT" x="7" y="0"/>
+                    </Anchors>
+                </FontString>
+            </Layer>
+        </Layers>
+    </Frame>
+</Ui>
