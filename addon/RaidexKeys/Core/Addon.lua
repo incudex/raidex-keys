@@ -81,6 +81,7 @@ function Addon:PrintStatus()
     self:Print(T.Exchange:UsesLibKeystone()
         and L["Keystone exchange: through LibKeystone (another addon)"]
         or L["Keystone exchange: built in"])
+    self:Print(L["Reward levels known: %d"]:format(db:CountRewardLevels()))
     self:Print(L["Data is saved when you log out or type /reload."])
     self:Print(L["Commands: /rk, /rk options, /rk minimap, /rk debug"])
 end
@@ -106,6 +107,20 @@ function Addon:PrintDebug()
         for key, value in pairs(first) do fields[#fields + 1] = key .. "=" .. tostring(T.Plain(value)) end
         table.sort(fields)
         self:Print("debug summary run[1]: " .. table.concat(fields, " "))
+    end
+
+    local rewards, known = T.Snapshot.RewardLevels(), 0
+    for _ in pairs(rewards) do known = known + 1 end
+    show("reward levels the game answers (of 29)", known)
+    if C_MythicPlus.GetRewardLevelForDifficultyLevel then
+        show("+10 reward (weekly, end of run)", C_MythicPlus.GetRewardLevelForDifficultyLevel(10))
+    end
+    if C_MythicPlus.GetRewardLevelFromKeystoneLevel then
+        show("+10 reward (from keystone level)", C_MythicPlus.GetRewardLevelFromKeystoneLevel(10))
+    end
+    local stored = T.DB:Data().rewards
+    if stored and stored[10] then
+        show("+10 stored (item level, vault)", stored[10].itemLevel, stored[10].vaultItemLevel)
     end
 
     local maps = C_ChallengeMode.GetMapTable() or {}

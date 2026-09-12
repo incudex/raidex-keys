@@ -59,10 +59,51 @@ function Snapshot:Rating()
     return rating or 0
 end
 
+local REWARD_LEVELS = 30
+
+function Snapshot.RewardLevels()
+    local rewards = {}
+    if not C_MythicPlus.GetRewardLevelForDifficultyLevel then return rewards end
+    for level = 2, REWARD_LEVELS do
+        local vault, endOfRun = C_MythicPlus.GetRewardLevelForDifficultyLevel(level)
+        vault, endOfRun = Plain(vault), Plain(endOfRun)
+        if not (endOfRun and endOfRun > 0) and C_MythicPlus.GetRewardLevelFromKeystoneLevel then
+            endOfRun = Plain(C_MythicPlus.GetRewardLevelFromKeystoneLevel(level))
+        end
+        local itemLevel = (endOfRun and endOfRun > 0) and endOfRun or vault
+        if itemLevel and itemLevel > 0 then
+            rewards[level] = {
+                itemLevel = itemLevel,
+                vaultItemLevel = (vault and vault > 0 and vault ~= itemLevel) and vault or nil,
+            }
+        end
+    end
+    return rewards
+end
+
+local REWARD_RETRIES = 12
+local rewardRetries = 0
+
+local function rewardLevels(db)
+    local rewards = Snapshot.RewardLevels()
+    if next(rewards) then
+        db.rewards = rewards
+        rewardRetries = 0
+        return
+    end
+    if db.rewards or rewardRetries >= REWARD_RETRIES then return end
+    rewardRetries = rewardRetries + 1
+    C_MythicPlus.RequestRewards()
+    C_Timer.After(5, function() Snapshot:Schedule() end)
+end
+
 local function seasonData(db)
     db.region = Plain(GetCurrentRegionName()) or db.region
     local season = Plain(C_MythicPlus.GetCurrentSeason())
-    if season and season > 0 then db.season = season end
+    if season and season > 0 then
+        if db.season and db.season ~= season then db.rewards = nil end
+        db.season = season
+    end
 
     local untilReset = Plain(C_DateAndTime.GetSecondsUntilWeeklyReset())
     if untilReset then db.resetAt = GetServerTime() + untilReset end
@@ -73,6 +114,8 @@ local function seasonData(db)
         for i, affix in ipairs(affixes) do ids[i] = affix.id end
         db.affixes = ids
     end
+
+    rewardLevels(db)
 
     local maps = C_ChallengeMode.GetMapTable()
     if maps and #maps > 0 then

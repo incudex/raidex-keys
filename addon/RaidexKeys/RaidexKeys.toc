@@ -3,8 +3,8 @@
 ## Notes: Keystones of all your characters and your guild - for the Raidex Keys desktop app.
 ## Notes-deDE: Keystones aller Twinks und deiner Gilde - für die Desktop-App Raidex Keys.
 ## Author: Lars Gossard
-## Version: 0.1.9
-## X-Build: 101
+## Version: 0.1.12
+## X-Build: 122
 ## X-Email: raidex@incudex.de
 ## X-Website: https://raidex.app/keys/
 ## X-License: GPL-3.0-or-later

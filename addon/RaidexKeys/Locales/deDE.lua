@@ -28,6 +28,7 @@ L["Report bugs: %s"] = "Fehler melden: %s"
 
 L["Characters stored: %d"] = "Gespeicherte Charaktere: %d"
 L["Guild keys this week: %d"] = "Gildenkeys diese Woche: %d"
+L["Reward levels known: %d"] = "Bekannte Belohnungsstufen: %d"
 L["Keystone exchange: through LibKeystone (another addon)"] =
     "Keystone-Austausch: über LibKeystone (anderes Addon)"
 L["Keystone exchange: built in"] = "Keystone-Austausch: eingebaut"

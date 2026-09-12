@@ -36,6 +36,12 @@ function DB:Initialize()
 end
 
 function DB:Data() return self.db end
+
+function DB:CountRewardLevels()
+    local n = 0
+    for _ in pairs(self.db.rewards or {}) do n = n + 1 end
+    return n
+end
 function DB:Settings() return self.db.settings end
 
 function DB:CountCharacters()
