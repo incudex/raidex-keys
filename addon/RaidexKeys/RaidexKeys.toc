@@ -4,7 +4,7 @@
 ## Notes-deDE: Keystones aller Twinks und deiner Gilde und ein Mythic+-Timer - allein oder mit der Desktop-App Raidex Keys.
 ## Author: Lars Gossard
 ## Version: 0.4.0
-## X-Build: 199
+## X-Build: 201
 ## X-Email: raidex@incudex.de
 ## X-Website: https://raidex.app/keys/
 ## X-License: GPL-3.0-or-later
