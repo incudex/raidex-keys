@@ -3,8 +3,8 @@
 ## Notes: Keystones of all your characters and your guild, and a Mythic+ timer - on its own, or with the Raidex Keys desktop app.
 ## Notes-deDE: Keystones aller Twinks und deiner Gilde und ein Mythic+-Timer - allein oder mit der Desktop-App Raidex Keys.
 ## Author: Lars Gossard
-## Version: 0.4.0
-## X-Build: 201
+## Version: 0.4.1
+## X-Build: 206
 ## X-Email: raidex@incudex.de
 ## X-Website: https://raidex.app/keys/
 ## X-License: GPL-3.0-or-later

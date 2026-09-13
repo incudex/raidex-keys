@@ -15,38 +15,77 @@ local mode, postId
 local form = { day = 0, minutes = 19 * 60, note = "" }
 local W, C
 
+local function epochDays(year, month, day)
+    if month <= 2 then year = year - 1 end
+    local era = math.floor(year / 400)
+    local yoe = year - era * 400
+    local doy = math.floor((153 * ((month + 9) % 12) + 2) / 5) + day - 1
+    return era * 146097 + yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy - 719468
+end
+
+local function quarter(seconds)
+    return math.floor(seconds / 900 + 0.5) * 900
+end
+
+local function localOffset(at)
+    local t = date("*t", at)
+    return epochDays(t.year, t.month, t.day) * 86400 + t.hour * 3600 + t.min * 60 + t.sec - at
+end
+
+function BoardPane.RealmOffset(at)
+    local now = GetServerTime()
+    local cal = C_DateAndTime and C_DateAndTime.GetCurrentCalendarTime
+        and T.Plain(C_DateAndTime.GetCurrentCalendarTime())
+    local offset
+    if cal and cal.year and cal.hour then
+        offset = quarter(epochDays(cal.year, cal.month, cal.monthDay) * 86400
+            + cal.hour * 3600 + cal.minute * 60 - now)
+    else
+        offset = quarter(localOffset(now))
+    end
+    if at then offset = offset + quarter(localOffset(at) - localOffset(now)) end
+    return offset
+end
+
+local function realm(at)
+    return at + BoardPane.RealmOffset(at)
+end
+
 function BoardPane.DayText(at)
-    local index = tonumber(date("%w", at)) + 1
+    local shown = realm(at)
+    local index = tonumber(date("!%w", shown)) + 1
     local names = CALENDAR_WEEKDAY_NAMES
     local weekday = names and names[index] or L[WEEKDAYS[index]]
-    return ("%s, %s"):format(weekday, date(L["%m/%d"], at))
+    return ("%s, %s"):format(weekday, date("!" .. L["%m/%d"], shown))
 end
 
 function BoardPane.TimeText(at)
-    return date("%H:%M", at)
+    return date("!%H:%M", realm(at))
+end
+
+function BoardPane.DayKey(at)
+    return date("!%Y-%m-%d", realm(at))
 end
 
 function BoardPane.RoleName(letter)
     return _G[ROLE_NAMES[letter] or "DAMAGER"] or L[ROLE_FALLBACK[letter] or "Damage"]
 end
 
+local function realmToday()
+    local shown = realm(GetServerTime())
+    return shown - shown % 86400
+end
+
 function BoardPane.FormTime(day, minutes)
-    local t = date("*t", GetServerTime())
-    t.hour, t.min, t.sec = 0, 0, 0
-    t.day = t.day + (day or 0)
-    return time(t) + (minutes or 0) * 60
+    local wall = realmToday() + (day or 0) * 86400 + (minutes or 0) * 60
+    return wall - BoardPane.RealmOffset(wall - BoardPane.RealmOffset())
 end
 
 local function formDefaults()
-    local now = date("*t", GetServerTime() + 3600)
-    local minutes = now.hour * 60 + now.min
+    local minutes = math.floor((realm(GetServerTime() + 3600) - realmToday()) / 60)
     minutes = math.ceil(minutes / STEP_MINUTES) * STEP_MINUTES
-    form.day = 0
-    if minutes >= 24 * 60 then
-        minutes = minutes - 24 * 60
-        form.day = 1
-    end
-    form.minutes = minutes
+    form.day = math.floor(minutes / (24 * 60))
+    form.minutes = minutes % (24 * 60)
     form.note = ""
 end
 

@@ -157,6 +157,14 @@ function Exchange:UsesLibKeystone()
     return lks ~= nil
 end
 
+local function memberKey(who)
+    if party[who] then return party[who] end
+    local guild = currentGuild()
+    local entry = guild and guild.keys[who]
+    if entry and entry.level and (entry.seenAt or 0) >= T.DB:WeekStart() then return entry end
+    return nil
+end
+
 function Exchange:PartyKnown()
     local size = GetNumGroupMembers()
     if size == 0 then return nil end
@@ -167,7 +175,7 @@ function Exchange:PartyKnown()
         name, realm = Plain(name), Plain(realm)
         if name then
             local who = realm and realm ~= "" and (name .. "-" .. realm) or fullName(name)
-            if not isSelf(who) and party[who] then known = known + 1 end
+            if not isSelf(who) and memberKey(who) then known = known + 1 end
         end
     end
     return known, size
@@ -191,7 +199,7 @@ function Exchange:PartyKeys()
         if name then
             local who = realm and realm ~= "" and (name .. "-" .. realm) or fullName(name)
             if not isSelf(who) then
-                local entry = party[who] or {}
+                local entry = memberKey(who) or {}
                 local _, memberClass = UnitClassBase(unit)
                 list[#list + 1] = { name = name, mapId = entry.mapId, level = entry.level,
                     rating = entry.rating, classId = Plain(memberClass), seenAt = entry.seenAt }
@@ -285,7 +293,10 @@ function Exchange:Start()
     end)
 
     requestRoster()
-    C_Timer.After(15, function() Exchange:Ask("GUILD") end)
+    C_Timer.After(15, function()
+        Exchange:Ask("GUILD")
+        Exchange:Ask("PARTY")
+    end)
     C_Timer.NewTicker(GUILD_INTERVAL, function() Exchange:Ask("GUILD") end)
 end
 

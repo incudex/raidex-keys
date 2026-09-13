@@ -216,12 +216,12 @@ end
 function Window.BoardEntries(posts)
     local count = {}
     for _, post in ipairs(posts or {}) do
-        local day = date("%Y-%m-%d", post.at)
+        local day = T.BoardPane.DayKey(post.at)
         count[day] = (count[day] or 0) + 1
     end
     local entries, current = {}, nil
     for _, post in ipairs(posts or {}) do
-        local day = date("%Y-%m-%d", post.at)
+        local day = T.BoardPane.DayKey(post.at)
         if day ~= current then
             current = day
             entries[#entries + 1] = { group = true, title = T.BoardPane.DayText(post.at),
