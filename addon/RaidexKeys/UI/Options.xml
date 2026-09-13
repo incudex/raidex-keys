@@ -3,12 +3,45 @@
         <Size y="45"/>
         <Layers>
             <Layer level="OVERLAY">
-                <FontString parentKey="Text" inherits="GameFontHighlight" justifyH="LEFT" justifyV="TOP">
+                <FontString parentKey="Text" inherits="GameFontHighlightSmall" justifyH="LEFT" justifyV="TOP">
                     <Anchors>
                         <Anchor point="TOPLEFT" x="7" y="0"/>
                     </Anchors>
                 </FontString>
             </Layer>
         </Layers>
+    </Frame>
+    <Frame name="RaidexKeysColorTemplate" mixin="RaidexKeysColorMixin" virtual="true">
+        <Size y="26"/>
+        <Layers>
+            <Layer level="OVERLAY">
+                <FontString parentKey="Label" inherits="GameFontHighlight" justifyH="LEFT">
+                    <Anchors>
+                        <Anchor point="LEFT" x="7" y="0"/>
+                    </Anchors>
+                </FontString>
+            </Layer>
+        </Layers>
+        <Frames>
+            <Button parentKey="Swatch">
+                <Size x="30" y="16"/>
+                <Anchors>
+                    <Anchor point="LEFT" x="300" y="0"/>
+                </Anchors>
+                <Layers>
+                    <Layer level="BORDER">
+                        <Texture parentKey="Edge" setAllPoints="true"/>
+                    </Layer>
+                    <Layer level="ARTWORK">
+                        <Texture parentKey="Fill">
+                            <Anchors>
+                                <Anchor point="TOPLEFT" x="1" y="-1"/>
+                                <Anchor point="BOTTOMRIGHT" x="-1" y="1"/>
+                            </Anchors>
+                        </Texture>
+                    </Layer>
+                </Layers>
+            </Button>
+        </Frames>
     </Frame>
 </Ui>

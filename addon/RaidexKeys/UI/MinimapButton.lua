@@ -5,6 +5,7 @@ local MinimapButton = {}
 T.MinimapButton = MinimapButton
 
 local ICON = "Interface\\AddOns\\RaidexKeys\\Media\\Minimap"
+local DEFAULT_ANGLE = 225
 local GLOW = { 0.655, 0.545, 1.0 }
 local TIMER = { 0.788, 0.635, 0.153 }
 local MUTED = { 0.557, 0.580, 0.722 }
@@ -22,26 +23,34 @@ local function row(tooltip, label, value)
     tooltip:AddDoubleLine(label, value, MUTED[1], MUTED[2], MUTED[3], WHITE[1], WHITE[2], WHITE[3])
 end
 
-function MinimapButton.FillTooltip(tooltip)
+function MinimapButton.FillTooltip(tooltip, sample)
     tooltip:AddLine(L["Raidex Keys"], GLOW[1], GLOW[2], GLOW[3])
-    row(tooltip, L["Your key"], keyText(T.Snapshot:OwnKey()))
+    if sample then
+        row(tooltip, L["Your key"], ("%s +%d"):format(sample.dungeon or "?", sample.level))
+        row(tooltip, L["Group"], L["%d / %d keys known"]:format(sample.known, sample.size))
+        row(tooltip, L["Guild"], L["%d keys this week"]:format(sample.guildKeys))
+    else
+        row(tooltip, L["Your key"], keyText(T.Snapshot:OwnKey()))
 
-    local known, size = T.Exchange:PartyKnown()
-    row(tooltip, L["Group"], known and L["%d / %d keys known"]:format(known, size) or L["not in a group"])
+        local known, size = T.Exchange:PartyKnown()
+        row(tooltip, L["Group"], known and L["%d / %d keys known"]:format(known, size) or L["not in a group"])
 
-    local guildKeys = T.Exchange:GuildKeysThisWeek()
-    row(tooltip, L["Guild"], not IsInGuild() and L["not in a guild"]
-        or guildKeys == 1 and L["1 key this week"]
-        or L["%d keys this week"]:format(guildKeys))
+        local guildKeys = T.Exchange:GuildKeysThisWeek()
+        row(tooltip, L["Guild"], not IsInGuild() and L["not in a guild"]
+            or guildKeys == 1 and L["1 key this week"]
+            or L["%d keys this week"]:format(guildKeys))
+    end
 
     tooltip:AddLine(" ")
-    tooltip:AddLine(L["Left-click: open options"], TIMER[1], TIMER[2], TIMER[3])
+    tooltip:AddLine(L["Left-click: open window"], TIMER[1], TIMER[2], TIMER[3])
+    tooltip:AddLine(L["Shift-click: open options"], TIMER[1], TIMER[2], TIMER[3])
+    tooltip:AddLine(L["Ctrl-click: show or hide the timer"], TIMER[1], TIMER[2], TIMER[3])
     tooltip:AddLine(L["Right-click: link key in chat"], TIMER[1], TIMER[2], TIMER[3])
 
-    T.Exchange:RefreshParty()
+    if not sample then T.Exchange:RefreshParty() end
 end
 
-local function keystoneLink()
+function MinimapButton.KeystoneLink()
     for bag = 0, NUM_BAG_SLOTS or 4 do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
             local itemId = C_Container.GetContainerItemID(bag, slot)
@@ -52,7 +61,7 @@ local function keystoneLink()
     end
 end
 
-local function linkInChat(link)
+function MinimapButton.LinkInChat(link)
     local insert = (ChatFrameUtil and ChatFrameUtil.InsertLink) or ChatEdit_InsertLink
     if insert and insert(link) then return end
     local open = (ChatFrameUtil and ChatFrameUtil.OpenChat) or ChatFrame_OpenChat
@@ -61,10 +70,14 @@ end
 
 function MinimapButton.OnClick(_, mouseButton)
     if mouseButton == "RightButton" then
-        local link = keystoneLink()
-        if link then linkInChat(link) else T.Addon:Print(L["No keystone in your bags."]) end
-    else
+        local link = MinimapButton.KeystoneLink()
+        if link then MinimapButton.LinkInChat(link) else T.Addon:Print(L["No keystone in your bags."]) end
+    elseif IsShiftKeyDown and IsShiftKeyDown() then
         T.OpenOptions()
+    elseif IsControlKeyDown and IsControlKeyDown() then
+        T.Timer:SetShown(not T.DB:Settings().timer.enabled)
+    else
+        T.Window:Toggle()
     end
 end
 
@@ -142,6 +155,11 @@ function MinimapButton:Start()
     create()
     self:SetShown(not T.DB:Settings().minimap.hide)
     registerBroker()
+end
+
+function MinimapButton:ResetPosition()
+    T.DB:Settings().minimap.angle = DEFAULT_ANGLE
+    if button then place(DEFAULT_ANGLE) end
 end
 
 function MinimapButton:SetShown(shown)

@@ -1,0 +1,8 @@
+<Bindings>
+    <Binding name="RAIDEXKEYS_TIMER" category="BINDING_CATEGORY_RAIDEXKEYS">
+        RaidexKeys_ToggleTimer()
+    </Binding>
+    <Binding name="RAIDEXKEYS_WINDOW" category="BINDING_CATEGORY_RAIDEXKEYS">
+        RaidexKeys_ToggleWindow()
+    </Binding>
+</Bindings>

@@ -5,6 +5,7 @@ local PREFIX = "LibKS"
 local THROTTLE = 3
 local GUILD_INTERVAL = 600
 local ENOUGH_TIME = 10
+local GUILD_REFRESH = 60
 
 local Exchange = {}
 T.Exchange = Exchange
@@ -30,6 +31,34 @@ local function currentGuild()
     return T.DB:Guild(name, realm or GetRealmName())
 end
 
+local function guildKey()
+    local guild = currentGuild()
+    return guild and (guild.name .. "-" .. guild.realm)
+end
+
+local function rosterClasses()
+    local key = guildKey()
+    return key and T.DB:Data().roster[key] or {}
+end
+
+local function readRoster()
+    if not (IsInGuild() and GetGuildRosterInfo and GetNumGuildMembers) then return end
+    local classes = {}
+    for i = 1, (GetNumGuildMembers() or 0) do
+        local name, _, _, _, _, _, _, _, _, _, classFile = GetGuildRosterInfo(i)
+        name, classFile = Plain(name), Plain(classFile)
+        if name and classFile then classes[fullName(name)] = classFile end
+    end
+    local key = guildKey()
+    if not (key and next(classes)) then return end
+    T.DB:Data().roster[key] = classes
+    if T.Window then T.Window:Refresh() end
+end
+
+local function requestRoster()
+    if C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster() end
+end
+
 local function received(level, mapId, rating, sender, channel)
     local who = fullName(sender)
     if not (who and level) then return end
@@ -38,11 +67,11 @@ local function received(level, mapId, rating, sender, channel)
         mapId = level > 0 and mapId or nil,
         level = level > 0 and level or nil,
         rating = rating,
+        seenAt = GetServerTime(),
     }
     if channel == "GUILD" then
         local guild = currentGuild()
         if not guild then return end
-        entry.seenAt = GetServerTime()
         guild.keys[who] = entry
     elseif channel == "PARTY" then
         party[who] = entry
@@ -119,6 +148,11 @@ function Exchange:RefreshParty()
     if GetTime() - lastAsked.PARTY > ENOUGH_TIME then self:Ask("PARTY") end
 end
 
+function Exchange:RefreshGuild()
+    requestRoster()
+    if GetTime() - lastAsked.GUILD > GUILD_REFRESH then self:Ask("GUILD") end
+end
+
 function Exchange:UsesLibKeystone()
     return lks ~= nil
 end
@@ -139,6 +173,74 @@ function Exchange:PartyKnown()
     return known, size
 end
 
+function Exchange:PartyKeys()
+    local size = GetNumGroupMembers()
+    if size == 0 then return {} end
+
+    local mapId, level = T.Snapshot:OwnKey()
+    local _, classId = UnitClassBase("player")
+    local list = { { name = Plain(UnitName("player")), mapId = mapId, level = level,
+        rating = math.floor(T.Snapshot:Rating() + 0.5), classId = classId,
+        seenAt = GetServerTime() } }
+
+    local prefix = IsInRaid() and "raid" or "party"
+    for i = 1, size do
+        local unit = prefix .. i
+        local name, realm = UnitFullName(unit)
+        name, realm = Plain(name), Plain(realm)
+        if name then
+            local who = realm and realm ~= "" and (name .. "-" .. realm) or fullName(name)
+            if not isSelf(who) then
+                local entry = party[who] or {}
+                local _, memberClass = UnitClassBase(unit)
+                list[#list + 1] = { name = name, mapId = entry.mapId, level = entry.level,
+                    rating = entry.rating, classId = Plain(memberClass), seenAt = entry.seenAt }
+            end
+        end
+    end
+    return list
+end
+
+local function shortName(who)
+    local name, realm = who:match("^(.-)%-(.+)$")
+    if not name then return who end
+    if realm == (GetNormalizedRealmName() or GetRealmName()) then return name end
+    return who
+end
+
+Exchange.ShortName = shortName
+
+function Exchange:ClassOf(who)
+    return rosterClasses()[who]
+end
+
+local function ownGuildKey()
+    local mapId, level = T.Snapshot:OwnKey()
+    if not level then return nil end
+    local _, classId = UnitClassBase("player")
+    return {
+        name = Plain(UnitName("player")), mapId = mapId, level = level,
+        rating = math.floor(T.Snapshot:Rating() + 0.5), classId = Plain(classId),
+        seenAt = GetServerTime(),
+    }
+end
+
+function Exchange:GuildView()
+    local guild = currentGuild()
+    if not guild then return nil end
+    local since, keys = T.DB:WeekStart(), {}
+    local own = ownGuildKey()
+    if own then keys[1] = own end
+    local classes = rosterClasses()
+    for who, entry in pairs(guild.keys) do
+        if entry.level and (entry.seenAt or 0) >= since then
+            keys[#keys + 1] = { name = shortName(who), mapId = entry.mapId, level = entry.level,
+                rating = entry.rating, classFile = classes[who], seenAt = entry.seenAt }
+        end
+    end
+    return { name = guild.name, keys = keys }
+end
+
 function Exchange:GuildKeysThisWeek()
     local guild = currentGuild()
     if not guild then return 0 end
@@ -146,6 +248,7 @@ function Exchange:GuildKeysThisWeek()
     for _, entry in pairs(guild.keys) do
         if entry.level and (entry.seenAt or 0) >= since then n = n + 1 end
     end
+    if ownGuildKey() then n = n + 1 end
     return n
 end
 
@@ -177,7 +280,11 @@ function Exchange:Start()
         Addon:Debounce("party", 2, function() Exchange:Ask("PARTY") end)
     end)
     Addon:On("GROUP_LEFT", function() wipe(party) end)
+    Addon:On("GUILD_ROSTER_UPDATE", function()
+        Addon:Debounce("roster", 2, readRoster)
+    end)
 
+    requestRoster()
     C_Timer.After(15, function() Exchange:Ask("GUILD") end)
     C_Timer.NewTicker(GUILD_INTERVAL, function() Exchange:Ask("GUILD") end)
 end

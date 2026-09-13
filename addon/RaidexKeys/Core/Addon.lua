@@ -58,14 +58,89 @@ function Addon:Flush(key)
     fn()
 end
 
+T.GRID_DEFAULT, T.GRID_MAX = 10, 40
+
+function T.Snap(value, step)
+    if not step or step <= 0 then return value end
+    return math.floor(value / step + 0.5) * step
+end
+
+local dragDriver = CreateFrame("Frame")
+
+function T.BeginDrag(frame)
+    local step = T.DB:Settings().grid or T.GRID_DEFAULT
+    local left, top = frame:GetLeft(), frame:GetTop()
+    if step <= 0 or not (left and top) then
+        frame:StartMoving()
+        return
+    end
+    local scale = frame:GetEffectiveScale()
+    local x, y = GetCursorPosition()
+    local grabX, grabY = x / scale - left, y / scale - top
+    frame.gridDrag = true
+    dragDriver:SetScript("OnUpdate", function()
+        local cursorX, cursorY = GetCursorPosition()
+        local per = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+        local newLeft = T.Snap((cursorX / scale - grabX) * per, step) / per
+        local newTop = T.Snap((cursorY / scale - grabY) * per, step) / per
+        frame:ClearAllPoints()
+        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", newLeft, newTop)
+    end)
+end
+
+function T.EndDrag(frame)
+    if frame.gridDrag then
+        frame.gridDrag = nil
+        dragDriver:SetScript("OnUpdate", nil)
+    else
+        frame:StopMovingOrSizing()
+    end
+end
+
+local HINT = "|cffc9a227"
+
+function T.SayTimerHint()
+    Addon:Print(L["Set the Mythic+ timer up before you run a key: dragging it into place and settling its look takes time a run does not give you."])
+    Addon:Print(HINT .. L["Shift-click the minimap button to open the options before your next run. The timer stands there while they are open, to drag into place and to set."] .. "|r")
+end
+
+local function firstRun()
+    local settings = T.DB:Settings()
+    if settings.introSeen then return end
+    settings.introSeen = true
+    C_Timer.After(8, T.SayTimerHint)
+end
+
+BINDING_CATEGORY_RAIDEXKEYS = L["Raidex Keys"]
+BINDING_NAME_RAIDEXKEYS_TIMER = L["Show or hide the Mythic+ timer"]
+BINDING_NAME_RAIDEXKEYS_WINDOW = L["Open the Raidex Keys window"]
+
+function RaidexKeys_ToggleTimer()
+    T.Timer:SetShown(not T.DB:Settings().timer.enabled)
+end
+
+function RaidexKeys_ToggleWindow()
+    T.Window:Toggle()
+end
+
 SLASH_RAIDEXKEYS1 = "/rk"
 SLASH_RAIDEXKEYS2 = "/raidexkeys"
 SlashCmdList.RAIDEXKEYS = function(input)
     local command = strtrim((input or ""):lower())
     if command == "options" or command == "config" then
         T.OpenOptions()
+    elseif command == "window" or command == "keys" then
+        T.Window:Toggle()
+    elseif command == "preview" or command == "demo" then
+        T.Preview:Toggle()
     elseif command == "minimap" then
         T.MinimapButton:SetShown(T.DB:Settings().minimap.hide)
+    elseif command == "timer" then
+        T.Timer:TogglePreview()
+    elseif command == "reset" then
+        T.ResetToDefaults()
+        Addon:Print(L["The timer looks as designed again."])
+        Addon:Print(L["Window, timer and minimap button stand where they first stood."])
     elseif command == "debug" then
         local ok, err = pcall(Addon.PrintDebug, Addon)
         if not ok then Addon:Print("debug failed: " .. tostring(err)) end
@@ -83,7 +158,7 @@ function Addon:PrintStatus()
         or L["Keystone exchange: built in"])
     self:Print(L["Reward levels known: %d"]:format(db:CountRewardLevels()))
     self:Print(L["Data is saved when you log out or type /reload."])
-    self:Print(L["Commands: /rk, /rk options, /rk minimap, /rk debug"])
+    self:Print(L["Commands: /rk window, /rk preview, /rk options, /rk minimap, /rk timer, /rk reset, /rk debug"])
 end
 
 function Addon:PrintDebug()
@@ -94,6 +169,7 @@ function Addon:PrintDebug()
     end
     show("addon version, build", C_AddOns.GetAddOnMetadata("RaidexKeys", "Version"),
         C_AddOns.GetAddOnMetadata("RaidexKeys", "X-Build"))
+    show("options Defaults followed", T.DefaultsHooked and T.DefaultsHooked() and "yes" or "no")
     show("season", C_MythicPlus.GetCurrentSeason())
     show("overall score", C_ChallengeMode.GetOverallDungeonScore())
     show("owned key (map, level)", C_MythicPlus.GetOwnedKeystoneChallengeMapID(), C_MythicPlus.GetOwnedKeystoneLevel())
@@ -159,6 +235,11 @@ loader:SetScript("OnEvent", function(self, event, name)
         self:UnregisterAllEvents()
         T.Snapshot:Start()
         T.Exchange:Start()
+        T.Board:Start()
         T.MinimapButton:Start()
+        T.Timer:Start()
+        T.Window:Start()
+        T.WatchOptionsPanel()
+        firstRun()
     end
 end)
