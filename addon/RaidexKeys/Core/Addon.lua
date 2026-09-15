@@ -230,6 +230,7 @@ loader:RegisterEvent("PLAYER_LOGIN")
 loader:SetScript("OnEvent", function(self, event, name)
     if event == "ADDON_LOADED" and name == ADDON then
         T.DB:Initialize()
+        T.Themes.Apply()
         T.SetupOptions()
     elseif event == "PLAYER_LOGIN" then
         self:UnregisterAllEvents()

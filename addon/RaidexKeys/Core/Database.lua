@@ -12,6 +12,7 @@ local defaults = {
     board = {},
     settings = {
         shareWithGuild = true,
+        theme = "raidex",
         introSeen = false,
         grid = 10,
         minimap = { hide = false, angle = 225 },
@@ -23,7 +24,7 @@ local defaults = {
             background = { 0.035, 0.043, 0.094 },
             text = { 0.910, 0.918, 0.965 },
         },
-        window = { font = "marcellus", fontSize = 13 },
+        window = { font = "marcellus", fontSize = 13, timeFormat = "auto", dateFormat = "auto" },
     },
 }
 

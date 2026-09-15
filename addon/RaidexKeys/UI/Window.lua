@@ -4,25 +4,8 @@ local L = T.L
 local Window = {}
 T.Window = Window
 
-local C = {
-    bg       = { 0.055, 0.055, 0.125 },
-    edge     = { 0.227, 0.196, 0.322 },
-    header   = { 0.090, 0.071, 0.200 },
-    info     = { 0.071, 0.063, 0.165 },
-    divider  = { 0.102, 0.082, 0.251 },
-    rowLine  = { 0.078, 0.071, 0.180 },
-    tab      = { 0.102, 0.082, 0.251 },
-    tabText  = { 0.780, 0.714, 1.000 },
-    glow     = { 0.655, 0.545, 1.000 },
-    text     = { 0.910, 0.918, 0.965 },
-    body     = { 0.725, 0.741, 0.831 },
-    options  = { 0.714, 0.729, 0.820 },
-    muted    = { 0.557, 0.580, 0.722 },
-    faint    = { 0.435, 0.455, 0.584 },
-    dim      = { 0.290, 0.302, 0.400 },
-    vault    = { 0.459, 0.373, 0.141 },
-    gold     = { 0.788, 0.635, 0.153 },
-}
+local C = T.Themes.Colors
+local textColors, textureColors = {}, {}
 
 local BASE_SIZE = 13
 Window.SIZE_MIN, Window.SIZE_MAX, Window.DEFAULT_SIZE = 10, 18, BASE_SIZE
@@ -30,6 +13,7 @@ Window.SIZE_MIN, Window.SIZE_MAX, Window.DEFAULT_SIZE = 10, 18, BASE_SIZE
 local BASE = {
     W = 620,
     HEADER = 40, INFO = 24, TABS_H = 26, HEAD_H = 20, ROW_H = 22, GROUP_H = 26, FOOTER_H = 26,
+    TABS_GAP = 6,
     PAD = 14, ACCENT = 7, COL_L = 16, COL_R = 16, GAP = 7,
     TAB_W = 84, ICON = 20, OPTIONS_H = 18, ARROW = 8, GRIP = 16,
     DOT = 6, DOT_GAP = 2, SLOT = 9, SLOT_GAP = 4,
@@ -43,7 +27,7 @@ local BASE_COLW = { name = 140, dungeon = 122, key = 34, week = 54, vault = 62, 
 local ROWS, MIN_ROWS = 12, 4
 local DOTS = 7
 local ICON = "Interface\\AddOns\\RaidexKeys\\Media\\Icon"
-local SORTABLE = { name = true, dungeon = true, key = true, rating = true }
+local SORTABLE = { name = true, dungeon = true, key = true, week = true, vault = true, sync = true, rating = true }
 
 local TABS = { "guild", "chars", "party", "goal", "board" }
 local SORTED = { guild = true, chars = true, party = true }
@@ -75,7 +59,7 @@ local function metrics()
 end
 
 local function chromeHeight()
-    return M.HEADER + M.INFO + M.TABS_H + M.HEAD_H + M.FOOTER_H
+    return M.HEADER + M.INFO + M.TABS_GAP * 2 + M.TABS_H + M.HEAD_H + M.FOOTER_H
 end
 
 local function minSize()
@@ -118,15 +102,28 @@ local function byRating(a, b)
     return (a.rating or 0) > (b.rating or 0)
 end
 
+function Window.MainGuid(guid)
+    local main = T.DB:Settings().main
+    if main and T.DB:Data().chars[main] then return main end
+    return guid or T.Plain(UnitGUID("player"))
+end
+
+function Window.SetMain(guid)
+    T.DB:Settings().main = guid ~= T.Plain(UnitGUID("player")) and guid or nil
+    Window:Refresh()
+end
+
 function Window.View()
     local db = T.DB:Data()
     local guid = T.Plain(UnitGUID("player"))
     local player = T.Plain(UnitName("player"))
+    local mainGuid = Window.MainGuid(guid)
     local view = { chars = {}, party = T.Exchange:PartyKeys(), guild = T.Exchange:GuildView() }
 
     for charGuid, char in pairs(db.chars) do
         local key = char.key
         view.chars[#view.chars + 1] = {
+            guid = charGuid, main = charGuid == mainGuid,
             name = char.name, realm = char.realm, classId = char.classId,
             rating = char.rating or 0,
             mapId = key and key.mapId, level = key and key.level,
@@ -155,7 +152,9 @@ function Window.View()
     end
     table.sort(guildKeys, byRating)
 
-    local own = guid and db.chars[guid]
+    local own = mainGuid and db.chars[mainGuid]
+    view.goalName = own and own.name
+    view.mainName = T.DB:Settings().main == mainGuid and own and own.name or nil
     if own and own.best and next(db.maps) and (next(own.best) or (own.rating or 0) == 0) then
         local bests = {}
         for mapId in pairs(db.maps) do
@@ -257,8 +256,7 @@ end
 function Window.Columns(tab, grouped)
     if tab == "goal" then return { "dungeon", "key", "name", "rating" } end
     if tab == "board" then return { "sync", "name", "dungeon", "key", "rating" } end
-    local cols = { "name" }
-    if not grouped then cols[#cols + 1] = "dungeon" end
+    local cols = { "name", "dungeon" }
     cols[#cols + 1] = "key"
     if tab == "chars" then
         cols[#cols + 1] = "week"
@@ -294,10 +292,20 @@ function Window.Layout(cols, width)
     return pos
 end
 
+local vaultItemLevel
+
+local function leads(row)
+    if row.main ~= nil then return row.main == true end
+    return row.own == true
+end
+
 local function sortValue(row, col)
     if col == "name" then return (row.name or ""):lower() end
     if col == "dungeon" then return (row.dungeon or ""):lower() end
     if col == "key" then return row.level or -1 end
+    if col == "week" then return row.runs or (row.week and #row.week) or -1 end
+    if col == "vault" then return vaultItemLevel(row.vault) or -1 end
+    if col == "sync" then return row.seenAt or -1 end
     return row.rating or -1
 end
 
@@ -319,15 +327,6 @@ function Window.Entries(rows, tab, sort)
     local list = {}
     for i, row in ipairs(rows) do list[i] = row end
     table.sort(list, sorter(sort))
-
-    if tab ~= "guild" then
-        local own, rest = {}, {}
-        for _, row in ipairs(list) do
-            if row.own then own[#own + 1] = row else rest[#rest + 1] = row end
-        end
-        for _, row in ipairs(rest) do own[#own + 1] = row end
-        list = own
-    end
 
     if not Window.Grouped(tab, sort) then return list end
 
@@ -396,7 +395,8 @@ end
 function Window.FooterLeft(view, which)
     if which == "chars" then
         if #view.chars == 0 then return L["no characters stored yet"] end
-        return L["%d characters"]:format(#view.chars)
+        local count = L["%d characters"]:format(#view.chars)
+        return view.mainName and ("%s · %s"):format(count, L["main: %s"]:format(view.mainName)) or count
     end
     if which == "party" then
         if #view.party == 0 then return L["not in a group"] end
@@ -407,7 +407,8 @@ function Window.FooterLeft(view, which)
     end
     if which == "goal" then
         if not view.goals then return L["no runs known yet"] end
-        return L["M+ rating %d · every run in time"]:format(view.goalRating or 0)
+        local rating = L["M+ rating %d"]:format(view.goalRating or 0)
+        return view.goalName and ("%s · %s"):format(view.goalName, rating) or rating
     end
     if which == "board" then
         if not view.board then return L["not in a guild"] end
@@ -452,7 +453,7 @@ function Window.Since(stamp)
     return L["%d d"]:format(math.floor(seconds / 86400))
 end
 
-local function vaultItemLevel(slots)
+function vaultItemLevel(slots)
     local best
     for _, slot in ipairs(slots or {}) do
         if (slot.progress or 0) >= (slot.threshold or 0) and slot.itemLevel then
@@ -503,32 +504,22 @@ for _, name in ipairs(TABS) do sorts[name] = defaultSort(name) end
 
 local leaving = false
 
-Window.FONTS = {
-    { key = "marcellus", path = "Interface\\AddOns\\RaidexKeys\\Media\\Marcellus.ttf" },
-    { key = "frizqt",    path = STANDARD_TEXT_FONT },
-    { key = "arialn",    path = "Fonts\\ARIALN.TTF" },
-}
+Window.FONTS = T.Fonts.List
 Window.DEFAULT_FONT = "marcellus"
-
-local function fontPath()
-    local chosen = T.DB:Settings().window.font
-    for _, font in ipairs(Window.FONTS) do
-        if font.key == chosen then return font.path end
-    end
-    return Window.FONTS[1].path
-end
 
 local fontStrings = {}
 
 local function setFont(fs, size)
     local scaled = round(size * metrics())
-    if fs:SetFont(fontPath(), scaled) == false then fs:SetFont(STANDARD_TEXT_FONT, scaled) end
+    T.Fonts.Set(fs, T.DB:Settings().window.font, scaled, nil,
+        size >= 16, Window.DEFAULT_FONT)
 end
 
 local function text(parent, size, color, justify)
     local fs = parent:CreateFontString(nil, "OVERLAY")
     setFont(fs, size)
     fs:SetTextColor(color[1], color[2], color[3])
+    textColors[fs] = color
     fs:SetJustifyH(justify or "LEFT")
     fontStrings[#fontStrings + 1] = { fs = fs, size = size }
     return fs
@@ -537,11 +528,13 @@ end
 local function fill(parent, color, alpha, layer)
     local texture = parent:CreateTexture(nil, layer or "BACKGROUND")
     texture:SetColorTexture(color[1], color[2], color[3], alpha or 1)
+    textureColors[texture] = { color = color, alpha = alpha or 1 }
     return texture
 end
 
 local function tint(region, color)
     region:SetTextColor(color[1], color[2], color[3])
+    textColors[region] = color
 end
 
 Window.C = C
@@ -555,7 +548,7 @@ function Window.Metrics()
     return M, f
 end
 
-function Window.Button(parent, label, onClick)
+function Window.Link(parent, label, onClick)
     local button = CreateFrame("Button", nil, parent)
     button.label = text(button, 12, C.gold, "CENTER")
     button.label:SetPoint("CENTER")
@@ -566,6 +559,47 @@ function Window.Button(parent, label, onClick)
         local f = metrics()
         self.label:SetText(value or "")
         self:SetSize(math.max(self.label:GetStringWidth(), 8) + round(12 * f), M.OPTIONS_H)
+    end
+    button:SetLabel(label)
+    return button
+end
+
+function Window.Button(parent, label, onClick)
+    local button = CreateFrame("Button", nil, parent)
+    button.face = fill(button, C.tab, 1)
+    button.face:SetAllPoints()
+    button.edges = {}
+    local function line(point, otherPoint, width, height)
+        local texture = fill(button, C.edge, 1, "BORDER")
+        texture:SetPoint(point)
+        texture:SetPoint(otherPoint)
+        if width then texture:SetWidth(width) else texture:SetHeight(height) end
+        button.edges[#button.edges + 1] = texture
+    end
+    line("TOPLEFT", "TOPRIGHT", nil, 1)
+    line("BOTTOMLEFT", "BOTTOMRIGHT", nil, 1)
+    line("TOPLEFT", "BOTTOMLEFT", 1)
+    line("TOPRIGHT", "BOTTOMRIGHT", 1)
+    button.label = text(button, 12, C.gold, "CENTER")
+    button.label:SetPoint("CENTER")
+
+    local function paint(hover)
+        local enabled = button:IsEnabled() ~= false
+        local edge = hover and enabled and C.gold or C.edge
+        for _, texture in ipairs(button.edges) do
+            texture:SetColorTexture(edge[1], edge[2], edge[3], 1)
+        end
+        tint(button.label, not enabled and C.dim or hover and C.text or C.gold)
+    end
+    button:SetScript("OnClick", onClick)
+    button:SetScript("OnEnter", function() paint(true) end)
+    button:SetScript("OnLeave", function() paint(false) end)
+    button:SetScript("OnEnable", function() paint(false) end)
+    button:SetScript("OnDisable", function() paint(false) end)
+    button.SetLabel = function(self, value)
+        local f = metrics()
+        self.label:SetText(value or "")
+        self:SetSize(math.max(self.label:GetStringWidth(), 8) + round(20 * f), M.OPTIONS_H + round(6 * f))
     end
     button:SetLabel(label)
     return button
@@ -585,8 +619,7 @@ end
 
 local function edges(parent)
     local function line(point, otherPoint, width, height)
-        local texture = parent:CreateTexture(nil, "BORDER")
-        texture:SetColorTexture(C.edge[1], C.edge[2], C.edge[3], 1)
+        local texture = fill(parent, C.edge, 1, "BORDER")
         texture:SetPoint(point)
         texture:SetPoint(otherPoint)
         if width then texture:SetWidth(width) else texture:SetHeight(height) end
@@ -676,11 +709,26 @@ local function createInfo()
 end
 
 local function createTabs()
+    R.tabBar = fill(frame, C.info, 1, "BORDER")
+    R.tabsRule = rule(frame, C.divider)
+
     tabButtons = {}
     for _, name in ipairs(TABS) do
         local button = CreateFrame("Button", nil, frame)
         button.background = fill(button, C.tab)
         button.background:SetAllPoints()
+        button.hover = fill(button, C.glow, 0.08, "BORDER")
+        button.hover:SetAllPoints()
+        button.hover:Hide()
+        button:SetScript("OnEnter", function()
+            if name == tab or button:IsEnabled() == false then return end
+            button.hover:Show()
+            tint(button.label, C.text)
+        end)
+        button:SetScript("OnLeave", function()
+            button.hover:Hide()
+            if name ~= tab then tint(button.label, button:IsEnabled() == false and C.dim or C.muted) end
+        end)
         button.underline = fill(button, C.glow, 1, "ARTWORK")
         button.underline:SetPoint("BOTTOMLEFT")
         button.underline:SetPoint("BOTTOMRIGHT")
@@ -688,6 +736,7 @@ local function createTabs()
         button.label = text(button, 12, C.muted, "CENTER")
         button.label:SetPoint("CENTER")
         button:SetScript("OnClick", function()
+            button.hover:Hide()
             tab, offset = name, 0
             sorts[name] = defaultSort(name)
             T.DB:Settings().window.tab = name
@@ -714,7 +763,7 @@ local function createHeadings()
             if sort.col == column then
                 sort.dir = sort.dir == "desc" and "asc" or "desc"
             else
-                sort.col, sort.dir = column, column == "rating" and "desc" or "asc"
+                sort.col, sort.dir = column, (column == "name" or column == "dungeon") and "asc" or "desc"
             end
             offset = 0
             Window:Refresh()
@@ -758,6 +807,21 @@ local function linkKey(row)
     T.MinimapButton.LinkInChat(("%s: %s +%d"):format(row.name or "?", row.dungeon or "?", row.level))
 end
 
+local function askMain(row)
+    if not (StaticPopupDialogs and StaticPopup_Show) then
+        Window.SetMain(row.guid)
+        return
+    end
+    StaticPopupDialogs.RAIDEXKEYS_MAIN = StaticPopupDialogs.RAIDEXKEYS_MAIN or {
+        text = "%s", button1 = YES, button2 = NO,
+        OnAccept = function(_, guid) Window.SetMain(guid) end,
+        timeout = 0, whileDead = true, hideOnEscape = true, preferredIndex = 3,
+    }
+    StaticPopup_Show("RAIDEXKEYS_MAIN",
+        L["Make %s your main? The rating goals are then planned on this character's runs."]:format(row.name or "?"),
+        nil, row.guid)
+end
+
 local function createEntry()
     local entry = CreateFrame("Frame", nil, list)
     entry:SetWidth(dims.w - 2)
@@ -797,13 +861,8 @@ local function createEntry()
         if not row then return end
         hovered = entry
         entry.hover:Show()
-        local hint = ""
-        if row.board then
-            hint = L["Click: details and sign-up"]
-        elseif row.level and not row.plan then
-            hint = L["Right-click: link key in chat"]
-        end
-        footer.hint:SetText(hint)
+        footer.hint:SetText(row.board and L["Click: details and sign-up"]
+            or (row.guid and not row.main and not entry.sample) and L["Click: make this your main"] or "")
     end)
     entry:SetScript("OnLeave", function()
         if hovered == entry then hovered = nil end
@@ -815,6 +874,8 @@ local function createEntry()
         if not row or entry.sample then return end
         if row.board then
             if button == "LeftButton" then T.BoardPane:Open(row.id) end
+        elseif button == "LeftButton" and row.guid and not row.main then
+            askMain(row)
         elseif button == "RightButton" and not row.plan then
             linkKey(row)
         end
@@ -869,7 +930,7 @@ local function drawRow(entry, row, pos, sample)
     entry.accent:ClearAllPoints()
     entry.accent:SetPoint("TOPLEFT", M.ACCENT, 0)
     entry.accent:SetPoint("BOTTOMLEFT", M.ACCENT, 0)
-    entry.accent:SetShown(row.own == true)
+    entry.accent:SetShown(leads(row))
 
     column(entry.name, pos, "name")
     entry.name:SetText(row.name or (row.plan and "-" or "?"))
@@ -953,17 +1014,16 @@ local function createList()
     empty.hint:SetPoint("TOP", empty.title, "BOTTOM", 0, -10)
     empty.hint:SetSpacing(3)
 
-    empty.action = CreateFrame("Button", nil, empty)
-    empty.action.label = text(empty.action, 12, C.gold, "CENTER")
-    empty.action.label:SetPoint("CENTER")
-    empty.action:SetPoint("TOP", empty.hint, "BOTTOM", 0, -10)
-    empty.action:SetScript("OnClick", function()
+    empty.action = Window.Button(empty, "", function()
         if empty.action.opens == "options" then
             T.OpenOptions()
         elseif empty.action.opens == "form" then
             T.BoardPane:OpenForm()
         end
     end)
+    empty.action:SetPoint("TOP", empty.hint, "BOTTOM", 0, -10)
+    empty.command = text(empty, 12, C.gold, "CENTER")
+    empty.command:SetPoint("TOP", empty.hint, "BOTTOM", 0, -10)
     empty:Hide()
 
     T.BoardPane:Create(frame, list)
@@ -1102,7 +1162,7 @@ local function applyBounds()
 end
 
 local function arrange()
-    R.listTop = M.HEADER + M.INFO + M.TABS_H + M.HEAD_H
+    R.listTop = M.HEADER + M.INFO + M.TABS_GAP * 2 + M.TABS_H + M.HEAD_H
     R.listH = math.max(M.ROW_H, dims.h - R.listTop - M.FOOTER_H)
 
     R.headerBar:SetHeight(M.HEADER - 1)
@@ -1124,14 +1184,19 @@ local function arrange()
     info.affixLabel:ClearAllPoints()
     info.affixLabel:SetPoint("LEFT", R.infoBar, "LEFT", M.PAD, 0)
 
+    R.tabBar:ClearAllPoints()
+    R.tabBar:SetPoint("TOPLEFT", 1, -(M.HEADER + M.INFO))
+    R.tabBar:SetPoint("TOPRIGHT", -1, -(M.HEADER + M.INFO))
+    R.tabBar:SetHeight(M.TABS_GAP * 2 + M.TABS_H)
+    setRule(R.tabsRule, M.HEADER + M.INFO + M.TABS_GAP * 2 + M.TABS_H - 1)
     for i, name in ipairs(TABS) do
         local button = tabButtons[name]
         button:SetSize(M.TAB_W, M.TABS_H)
         button:ClearAllPoints()
-        button:SetPoint("TOPLEFT", M.PAD + (i - 1) * M.TAB_W, -(M.HEADER + M.INFO))
+        button:SetPoint("TOPLEFT", M.PAD + (i - 1) * M.TAB_W, -(M.HEADER + M.INFO + M.TABS_GAP))
     end
     R.postButton:ClearAllPoints()
-    R.postButton:SetPoint("RIGHT", frame, "TOPRIGHT", -M.PAD, -(M.HEADER + M.INFO + math.floor(M.TABS_H / 2)))
+    R.postButton:SetPoint("RIGHT", frame, "TOPRIGHT", -M.PAD, -(M.HEADER + M.INFO + M.TABS_GAP + math.floor(M.TABS_H / 2)))
 
     for _, button in pairs(headings) do button:SetHeight(M.HEAD_H) end
     setRule(R.headRule, R.listTop - 1)
@@ -1146,7 +1211,7 @@ local function arrange()
     empty.title:SetPoint("TOP", 0, -math.max(0, math.floor(R.listH / 2) - round(34 * factor)))
     empty.title:SetWidth(math.max(0, dims.w - 80))
     empty.hint:SetWidth(M.EMPTY_HINT)
-    empty.action:SetSize(M.EMPTY_ACTION, M.OPTIONS_H)
+    empty.command:SetWidth(M.EMPTY_ACTION)
 
     scrollBar:SetWidth(M.BAR_HIT)
     thumb:SetWidth(M.BAR_HIT)
@@ -1272,7 +1337,8 @@ local function drawHeadings(pos, sort, which)
     if not (sorted and box) then sortArrow:Hide() return end
     sortArrow:ClearAllPoints()
     if sort.col == "rating" then
-        sortArrow:SetPoint("RIGHT", headings.rating.label, "LEFT", -3, 0)
+        local label = headings.rating.label
+        sortArrow:SetPoint("RIGHT", label, "RIGHT", -(math.min(label:GetStringWidth(), box.w) + 3), 0)
     else
         sortArrow:SetPoint("LEFT", headings[sort.col].label, "LEFT",
             math.min(headings[sort.col].label:GetStringWidth() + 4, box.w), 0)
@@ -1308,9 +1374,11 @@ local function drawEmpty(state)
     empty.title:SetText(state.title)
     empty.hint:SetText(state.hint)
     empty.action.opens = (state.options and "options") or (state.form and "form") or nil
-    empty.action:EnableMouse(empty.action.opens ~= nil)
-    empty.action.label:SetText(state.action or "")
-    empty.action:SetShown(state.action ~= nil)
+    local pressed = state.action ~= nil and empty.action.opens ~= nil
+    empty.action:SetLabel(state.action or "")
+    empty.action:SetShown(pressed)
+    empty.command:SetText(pressed and "" or state.action or "")
+    empty.command:SetShown(state.action ~= nil and not pressed)
     empty:Show()
 end
 
@@ -1318,6 +1386,11 @@ function Window:Refresh()
     if not frame or not frame:IsShown() then return end
     local view = preview and T.Sample.View() or Window.View()
     Window.view = view
+    local groupOpen = view.sample == true or IsInGroup() == true
+    if tab == "party" and not groupOpen then
+        tab, offset = "chars", 0
+        T.DB:Settings().window.tab = tab
+    end
     local rows, sample = Window.Rows(view, tab)
     local sort = sorts[tab]
     local entries = Window.Entries(rows, tab, sort)
@@ -1328,7 +1401,10 @@ function Window:Refresh()
         button.label:SetText(tabLabel(name))
         button.background:SetShown(active)
         button.underline:SetShown(active)
-        tint(button.label, active and C.tabText or C.muted)
+        local enabled = name ~= "party" or groupOpen
+        button:SetEnabled(enabled)
+        if active or not enabled then button.hover:Hide() end
+        tint(button.label, active and C.tabText or enabled and C.muted or C.dim)
     end
 
     info.affixes:SetText(Window.AffixText(view))
@@ -1374,6 +1450,14 @@ end
 function Window:Restyle()
     measure()
     if not frame then return end
+    for region, color in pairs(textColors) do
+        region:SetTextColor(color[1], color[2], color[3])
+    end
+    for region, entry in pairs(textureColors) do
+        local color = entry.color
+        region:SetColorTexture(color[1], color[2], color[3], entry.alpha)
+    end
+    if sortArrow then sortArrow:SetVertexColor(C.tabText[1], C.tabText[2], C.tabText[3]) end
     for _, entry in ipairs(fontStrings) do setFont(entry.fs, entry.size) end
     applySize()
 end
@@ -1438,4 +1522,5 @@ function Window:Start()
         restore()
     end)
     T.Addon:On("PLAYER_ENTERING_WORLD", restore)
+    T.Addon:On("GROUP_ROSTER_UPDATE", function() self:Refresh() end)
 end

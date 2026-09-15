@@ -9,9 +9,6 @@ body:
       value: |
         Deutsch oder Englisch – beides ist willkommen. · German or English, both are welcome.
 
-        Die App zeigt etwas falsch an und du weißt nicht, woran es liegt? Dann nimm lieber „Fehler in der App“.
-        The app shows something wrong and you don't know why? Then “Bug in the app” is the better form.
-
   - type: textarea
     id: summary
     attributes:

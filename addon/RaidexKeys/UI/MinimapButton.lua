@@ -6,10 +6,10 @@ T.MinimapButton = MinimapButton
 
 local ICON = "Interface\\AddOns\\RaidexKeys\\Media\\Minimap"
 local DEFAULT_ANGLE = 225
-local GLOW = { 0.655, 0.545, 1.0 }
-local TIMER = { 0.788, 0.635, 0.153 }
-local MUTED = { 0.557, 0.580, 0.722 }
-local WHITE = { 0.910, 0.918, 0.965 }
+local GLOW = T.Themes.Colors.glow
+local TIMER = T.Themes.Colors.gold
+local MUTED = T.Themes.Colors.muted
+local WHITE = T.Themes.Colors.text
 
 local button
 
@@ -45,7 +45,6 @@ function MinimapButton.FillTooltip(tooltip, sample)
     tooltip:AddLine(L["Left-click: open window"], TIMER[1], TIMER[2], TIMER[3])
     tooltip:AddLine(L["Shift-click: open options"], TIMER[1], TIMER[2], TIMER[3])
     tooltip:AddLine(L["Ctrl-click: show or hide the timer"], TIMER[1], TIMER[2], TIMER[3])
-    tooltip:AddLine(L["Right-click: link key in chat"], TIMER[1], TIMER[2], TIMER[3])
 
     if not sample then T.Exchange:RefreshParty() end
 end

@@ -51,16 +51,34 @@ local function realm(at)
     return at + BoardPane.RealmOffset(at)
 end
 
+local DATE_PATTERNS = { dmy = "%d.%m.", mdy = "%m/%d", iso = "%Y-%m-%d" }
+
+local function twelveHours()
+    local choice = T.DB:Settings().window.timeFormat
+    if choice == "12" then return true end
+    if choice == "24" then return false end
+    return GetCVarBool ~= nil and GetCVarBool("timeMgrUseMilitaryTime") == false
+end
+
+function BoardPane.ClockText(minutes)
+    local hour, minute = math.floor(minutes / 60) % 24, minutes % 60
+    if not twelveHours() then return ("%02d:%02d"):format(hour, minute) end
+    local suffix = hour < 12 and (TIMEMANAGER_AM or "AM") or (TIMEMANAGER_PM or "PM")
+    return ("%d:%02d %s"):format((hour + 11) % 12 + 1, minute, suffix)
+end
+
 function BoardPane.DayText(at)
     local shown = realm(at)
     local index = tonumber(date("!%w", shown)) + 1
     local names = CALENDAR_WEEKDAY_NAMES
     local weekday = names and names[index] or L[WEEKDAYS[index]]
-    return ("%s, %s"):format(weekday, date("!" .. L["%m/%d"], shown))
+    local pattern = DATE_PATTERNS[T.DB:Settings().window.dateFormat] or L["%m/%d"]
+    return ("%s, %s"):format(weekday, date("!" .. pattern, shown))
 end
 
 function BoardPane.TimeText(at)
-    return date("!%H:%M", realm(at))
+    local shown = realm(at)
+    return BoardPane.ClockText(tonumber(date("!%H", shown)) * 60 + tonumber(date("!%M", shown)))
 end
 
 function BoardPane.DayKey(at)
@@ -122,7 +140,7 @@ function BoardPane:Create(frame, list)
     pane.note = W.Text(pane, 12, C.body)
     pane.note:SetWordWrap(true)
     pane.back = button(L["Back"], function() BoardPane:Close() end)
-    pane.holder = button("", function() whisper(pane.holderName) end)
+    pane.holder = W.Link(pane, "", function() whisper(pane.holderName) end)
     pane.message = W.Text(pane, 12, C.muted)
 
     pane.lines = {}
@@ -200,7 +218,7 @@ function BoardPane:Arrange()
         pane.timePrev:SetPoint("LEFT", pane.dayNext, "RIGHT", gap(24), 0)
         pane.timeLabel:ClearAllPoints()
         pane.timeLabel:SetPoint("LEFT", pane.timePrev, "RIGHT", gap(6), 0)
-        pane.timeLabel:SetWidth(gap(60))
+        pane.timeLabel:SetWidth(gap(72))
         pane.timeNext:ClearAllPoints()
         pane.timeNext:SetPoint("LEFT", pane.timeLabel, "RIGHT", gap(6), 0)
         pane.noteLabel:ClearAllPoints()
@@ -305,8 +323,6 @@ local function drawPost()
     local message = T.Board.CountText(#post.applicants)
     if full and not post.own and not post.signedUp then
         message = L["Full - whisper %s to talk it over."]:format(post.name or "?")
-    elseif post.own then
-        message = L["Click a name to whisper."]
     end
     pane.message:SetText(message)
 end
@@ -321,7 +337,7 @@ local function drawForm()
     pane.title:SetText(mapId and ("%s+%d|r %s"):format(KEY_COLOR, level, mapName(mapId)) or L["No keystone in your bags."])
     pane.sub:SetText(T.Board:OwnPost() and L["Posting it replaces your earlier posting."] or L["Pin your key for a day and a time."])
     pane.dayLabel:SetText(BoardPane.DayText(BoardPane.FormTime(form.day, 0)))
-    pane.timeLabel:SetText(("%02d:%02d"):format(math.floor(form.minutes / 60), form.minutes % 60))
+    pane.timeLabel:SetText(BoardPane.ClockText(form.minutes))
     pane.noteLabel:SetText(L["Note, e.g. \"a few more keys afterwards\""])
     for _, name in ipairs({ "dayPrev", "timePrev" }) do pane[name]:SetLabel("<") end
     for _, name in ipairs({ "dayNext", "timeNext" }) do pane[name]:SetLabel(">") end

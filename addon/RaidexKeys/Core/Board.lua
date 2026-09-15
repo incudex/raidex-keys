@@ -11,7 +11,8 @@ Board.GROUP_SIZE = 5
 
 local COUNT_YELLOW, COUNT_GREEN, COUNT_RED = "|cffffd100", "|cff1eff00", "|cffff4d4d"
 
-function Board.CountText(count)
+function Board.CountText(signups)
+    local count = signups + 1
     local color = count < Board.GROUP_SIZE and COUNT_YELLOW
         or count == Board.GROUP_SIZE and COUNT_GREEN or COUNT_RED
     return ("%s%d|r/%d"):format(color, count, Board.GROUP_SIZE)

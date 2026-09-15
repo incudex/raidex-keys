@@ -7,17 +7,6 @@ body:
     attributes:
       value: Deutsch oder Englisch – beides ist willkommen. · German or English, both are welcome.
 
-  - type: dropdown
-    id: part
-    attributes:
-      label: Betrifft · Concerns
-      options:
-        - App
-        - Addon
-        - Beides · Both
-    validations:
-      required: true
-
   - type: textarea
     id: idea
     attributes:

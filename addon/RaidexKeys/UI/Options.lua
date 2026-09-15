@@ -78,6 +78,7 @@ local function aboutText()
     if website then lines[#lines + 1] = L["More: %s"]:format((website:gsub("^%a+://", ""):gsub("/$", ""))) end
     lines[#lines + 1] = GREY .. L["GNU GPL 3 or later, without any warranty"] .. "|r"
     lines[#lines + 1] = GREY .. L["Window font: Marcellus by Astigmatic, SIL Open Font License"] .. "|r"
+    lines[#lines + 1] = GREY .. L["PT Sans Narrow by ParaType, SIL Open Font License"] .. "|r"
     return table.concat(lines, "\n")
 end
 
@@ -143,15 +144,6 @@ local function checkbox(key, variable, table, name, default, tooltip, changed)
     return setting
 end
 
-local FONT_NAMES = {
-    marcellus = "Marcellus",
-    design   = "Friz Quadrata & Morpheus",
-    frizqt   = "Friz Quadrata",
-    arialn   = "Arial Narrow",
-    morpheus = "Morpheus",
-    skurri   = "Skurri",
-}
-
 local function toggle(key, name, tooltip, get, set)
     if not (Settings.RegisterProxySetting and Settings.CreateCheckbox) then return end
     local setting = Settings.RegisterProxySetting(category, ADDON .. "_" .. key,
@@ -164,6 +156,19 @@ end
 
 local function addGeneral(settings)
     addAbout()
+
+    if Settings.CreateDropdown then
+        local setting = Settings.RegisterProxySetting(category, ADDON .. "_theme",
+            Settings.VarType.String, L["Colour theme"], T.Themes.DEFAULT,
+            T.Themes.Current, T.Themes.Select)
+        Settings.CreateDropdown(category, setting, function()
+            local container = Settings.CreateControlTextContainer()
+            for _, theme in ipairs(T.Themes.List) do
+                container:Add(theme.key, theme.name)
+            end
+            return container:GetData()
+        end, L["Colours for the window, board, timer and tooltip. Choosing a theme resets the timer background and text colours; you can customise them afterwards."])
+    end
 
     checkbox("shareWithGuild", "shareWithGuild", settings, L["Share key with guild"], true,
         L["Guild members see your keystone through the LibKeystone protocol, as with BigWigs."],
@@ -198,11 +203,11 @@ local function addWindow(settings)
             end)
         Settings.CreateDropdown(category, setting, function()
             local container = Settings.CreateControlTextContainer()
-            for _, font in ipairs(T.Window.FONTS) do
-                container:Add(font.key, FONT_NAMES[font.key] or font.key)
+            for _, font in ipairs(T.Fonts.Available(window.font)) do
+                container:Add(font.key, font.name)
             end
             return container:GetData()
-        end, L["The font of the Raidex Keys window. Marcellus is the one it was designed in."])
+        end, L["Choose independently for this display. Additional fonts appear when an installed SharedMedia provider supplies them."])
     end
 
     slider("windowFontSize", L["Window font size"],
@@ -212,6 +217,35 @@ local function addWindow(settings)
         function(value) window.fontSize = value end,
         function(value) return tostring(value) end,
         function() T.Window:Restyle() end)
+
+    local function formatChoice(key, name, tooltip, choices)
+        if not Settings.CreateDropdown then return end
+        local setting = Settings.RegisterProxySetting(category, ADDON .. "_" .. key,
+            Settings.VarType.String, name, "auto",
+            function() return window[key] or "auto" end,
+            function(value)
+                window[key] = value
+                T.Window:Refresh()
+            end)
+        Settings.CreateDropdown(category, setting, function()
+            local container = Settings.CreateControlTextContainer()
+            for _, choice in ipairs(choices) do container:Add(choice[1], choice[2]) end
+            return container:GetData()
+        end, tooltip)
+    end
+    formatChoice("timeFormat", L["Time format"],
+        L["How the key board writes a posting's time. \"As the game's clock\" follows the 24-hour setting of the game's own clock."], {
+            { "auto", L["As the game's clock"] },
+            { "24", L["24 hours (22:15)"] },
+            { "12", L["12 hours (10:15 PM)"] },
+        })
+    formatChoice("dateFormat", L["Date format"],
+        L["How the key board writes a posting's day. \"As the game's language\" writes it the way the language of your game does."], {
+            { "auto", L["As the game's language"] },
+            { "dmy", L["Day.Month. (13.09.)"] },
+            { "mdy", L["Month/Day (09/13)"] },
+            { "iso", L["Year-Month-Day (2026-09-13)"] },
+        })
 end
 
 local function addTimer(timer)
@@ -311,11 +345,11 @@ local function addTimer(timer)
             end)
         Settings.CreateDropdown(category, setting, function()
             local container = Settings.CreateControlTextContainer()
-            for _, font in ipairs(T.Timer.FONTS) do
-                container:Add(font.key, FONT_NAMES[font.key] or font.key)
+            for _, font in ipairs(T.Fonts.Available(timer.font)) do
+                container:Add(font.key, font.name)
             end
             return container:GetData()
-        end, L["Friz Quadrata & Morpheus is the pairing the timer was drawn in: Morpheus for the head and the clock."])
+        end, L["Choose independently for this display. Additional fonts appear when an installed SharedMedia provider supplies them."])
     end
 
     element("RaidexKeysColorTemplate",
@@ -328,12 +362,14 @@ local DEFAULTS_METHODS = { "SetCurrentCategorySettingsToDefaults", "SetAllSettin
 local defaultsHooked = false
 
 function T.ResetToDefaults()
+    T.Themes.Select(T.Themes.DEFAULT)
     T.Timer:ResetLook()
     T.Timer:ResetPosition()
     T.Window:ResetPosition()
     T.MinimapButton:ResetPosition()
     local window = T.DB:Settings().window
     window.font, window.fontSize = T.Window.DEFAULT_FONT, T.Window.DEFAULT_SIZE
+    window.timeFormat, window.dateFormat = "auto", "auto"
     window.w, window.h = nil, nil
     T.DB:Settings().grid = T.GRID_DEFAULT
     T.Window:Restyle()

@@ -4,8 +4,6 @@ local L, Plain = T.L, T.Plain
 local Timer = {}
 T.Timer = Timer
 
-local DEFAULT_TEXT = { 0.910, 0.918, 0.965 }
-local DEFAULT_BACK = { 0.035, 0.043, 0.094 }
 local DEFAULT_ALPHA = 0.75
 local DEFAULT_SIZE = 11
 local DEFAULT_FONT = "frizqt"
@@ -76,27 +74,11 @@ Timer.SPACING_MIN, Timer.SPACING_MAX = 0.6, 1.5
 Timer.BOSSES_MIN, Timer.BOSSES_MAX = 0, 6
 Timer.SCALE_MIN, Timer.SCALE_MAX = 0.5, 2
 
-local DISPLAY_FONT = "Fonts\\MORPHEUS.TTF"
+Timer.FONTS = T.Fonts.List
 
-Timer.FONTS = {
-    { key = "design",   path = nil },
-    { key = "frizqt",   path = STANDARD_TEXT_FONT },
-    { key = "arialn",   path = "Fonts\\ARIALN.TTF" },
-    { key = "morpheus", path = DISPLAY_FONT },
-    { key = "skurri",   path = "Fonts\\SKURRI.TTF" },
-}
-
-local function fontPath(key)
-    for _, font in ipairs(Timer.FONTS) do
-        if font.key == key then return font.path end
-    end
-    return nil
-end
-
-local function fontFor(display)
-    local chosen = fontPath(T.DB:Settings().timer.font)
-    if chosen then return chosen end
-    return display and DISPLAY_FONT or STANDARD_TEXT_FONT
+local function setFont(region, size, display)
+    T.Fonts.Set(region, T.DB:Settings().timer.font, size, "OUTLINE",
+        display, DEFAULT_FONT)
 end
 
 local function clamp(value, low, high)
@@ -120,20 +102,43 @@ end
 
 function Timer.Style()
     local settings = T.DB:Settings().timer
-    local text = settings.text or DEFAULT_TEXT
-    local back = settings.background or DEFAULT_BACK
-    local textBy, backBy = difference(text, DEFAULT_TEXT), difference(back, DEFAULT_BACK)
+    local baseBack, baseText = T.Themes.TimerDefaults()
+    local text = settings.text or baseText
+    local back = settings.background or baseBack
+    local themed = T.Themes.Current() ~= T.Themes.DEFAULT
+    local colors, mix = T.Themes.Colors, T.Themes.Mix
+    local ramp = themed and { text = colors.text, body = colors.body,
+        muted = colors.muted, dim = colors.faint,
+        split = mix(colors.muted, colors.bg, 0.4),
+        faint = mix(colors.muted, colors.bg, 0.55),
+        mark = mix(colors.muted, colors.bg, 0.7) } or RAMP
+    local card = themed and { rule = colors.divider, track = colors.header,
+        trackEdge = colors.tab } or CARD
+    local textBy, backBy = difference(text, baseText), difference(back, baseBack)
 
-    for name, color in pairs(RAMP) do P[name] = hex(shift(color, textBy)) end
+    for name, color in pairs(ramp) do P[name] = hex(shift(color, textBy)) end
     for name, color in pairs(MEANING) do P[name] = hex(color) end
+    if themed then
+        P.gold, P.glow = hex(colors.gold), hex(colors.glow)
+    end
 
     C.card = { clamp(back[1]), clamp(back[2]), clamp(back[3]),
         clamp(settings.alpha or DEFAULT_ALPHA, Timer.ALPHA_MIN, Timer.ALPHA_MAX) }
-    for name, color in pairs(CARD) do C[name] = shift(color, backBy, 1) end
+    for name, color in pairs(card) do C[name] = shift(color, backBy, 1) end
     for name, color in pairs(FIXED) do C[name] = color end
+    if themed then
+        local function rgba(color, alpha, scale)
+            return { color[1] * (scale or 1), color[2] * (scale or 1),
+                color[3] * (scale or 1), alpha or 1 }
+        end
+        C.edge, C.accent = rgba(colors.glow, 0.22), rgba(colors.glow, 0.35)
+        C.goldLow, C.goldHigh = rgba(colors.gold, 1, 0.7), rgba(colors.gold)
+        C.glowLow, C.glowHigh = rgba(colors.glow, 1, 0.7), rgba(colors.glow)
+        C.markLow, C.markHigh = rgba(ramp.split), rgba(colors.muted)
+    end
 
-    C.markerDone = shift(RAMP.dim, textBy, 1)
-    C.markerOpen = shift(RAMP.mark, textBy, 1)
+    C.markerDone = shift(ramp.dim, textBy, 1)
+    C.markerOpen = shift(ramp.mark, textBy, 1)
 
     local size = clamp(settings.fontSize or DEFAULT_SIZE, Timer.SIZE_MIN, Timer.SIZE_MAX)
     for name, share in pairs(PROPORTIONS) do SIZES[name] = math.floor(size * share + 0.5) end
@@ -727,18 +732,18 @@ local function render(lines)
         hideRow(row)
         if line.kind ~= "rule" and line.kind ~= "bar" then
             local size = SIZES[line.size] or SIZES.body
-            row.left:SetFont(fontFor(line.display), size, "OUTLINE")
+            setFont(row.left, size, line.display)
             row.left:SetText(line.left or "")
             row.left:SetWidth(0)
             local needed = line.wrap and 0 or row.left:GetStringWidth()
             if line.marker then needed = needed + MARKER_W + MARKER_GAP end
             if line.label then
-                row.label:SetFont(fontFor(false), SIZES.small, "OUTLINE")
+                setFont(row.label, SIZES.small, false)
                 row.label:SetText(line.label)
                 needed = needed + 8 + row.label:GetStringWidth()
             end
             if line.right then
-                row.right:SetFont(fontFor(false), size, "OUTLINE")
+                setFont(row.right, size, false)
                 row.right:SetText(line.right)
                 needed = needed + COLUMN_GAP + row.right:GetStringWidth()
             end
@@ -1116,8 +1121,9 @@ function Timer:ResetLook()
     settings.showAffixes, settings.showScore = DEFAULT_AFFIXES, DEFAULT_SCORE
     settings.maxBosses = DEFAULT_BOSSES
     settings.scale = DEFAULT_SCALE
-    settings.background = { DEFAULT_BACK[1], DEFAULT_BACK[2], DEFAULT_BACK[3] }
-    settings.text = { DEFAULT_TEXT[1], DEFAULT_TEXT[2], DEFAULT_TEXT[3] }
+    local back, text = T.Themes.TimerDefaults()
+    settings.background = { back[1], back[2], back[3] }
+    settings.text = { text[1], text[2], text[3] }
     self:Restyle()
 end
 

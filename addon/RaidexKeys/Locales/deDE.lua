@@ -17,7 +17,6 @@ L["Shift-click: open options"] = "Shift-Klick: Einstellungen öffnen"
 L["Ctrl-click: show or hide the timer"] = "Strg-Klick: Timer ein-/ausblenden"
 L["Show or hide the Mythic+ timer"] = "Mythic+-Timer ein-/ausblenden"
 L["Open the Raidex Keys window"] = "Raidex-Keys-Fenster öffnen"
-L["Right-click: link key in chat"] = "Rechtsklick: Key in Chat linken"
 L["No keystone in your bags."] = "Kein Keystone in deinen Taschen."
 
 L["Alts"] = "Twinks"
@@ -74,8 +73,6 @@ L["The window and the timer move in steps of this many points while you drag the
 L["off"] = "aus"
 L["The size of the window's text. Rows, columns and the window itself grow and shrink with it; its lower right corner drags it bigger or smaller."] =
     "Die Größe der Schrift im Fenster. Zeilen, Spalten und das Fenster selbst wachsen und schrumpfen mit; an der unteren rechten Ecke lässt es sich größer oder kleiner ziehen."
-L["The font of the Raidex Keys window. Marcellus is the one it was designed in."] =
-    "Die Schrift des Raidex-Keys-Fensters. In Marcellus wurde es entworfen."
 L["Window font: Marcellus by Astigmatic, SIL Open Font License"] =
     "Schrift des Fensters: Marcellus von Astigmatic, SIL Open Font License"
 L["More: %s"] = "Mehr: %s"
@@ -102,7 +99,7 @@ L["No runs known yet"] = "Noch keine Läufe bekannt"
 L["no runs known yet"] = "noch keine Läufe bekannt"
 L["The goals are planned on this character's best runs of the season. The game hands them out a few seconds after login."] =
     "Die Ziele werden aus den besten Läufen dieses Charakters in der Saison geplant. Das Spiel liefert sie wenige Sekunden nach dem Einloggen."
-L["M+ rating %d · every run in time"] = "M+-Wertung %d · jeder Lauf in der Zeit"
+L["M+ rating %d"] = "M+-Wertung %d"
 
 L["Board"] = "Pinnwand"
 L["Time"] = "Uhrzeit"
@@ -136,7 +133,6 @@ L["Take back sign-up"] = "Abmelden"
 L["Take posting down"] = "Eintrag entfernen"
 L["The key is full."] = "Der Key ist voll."
 L["Full - whisper %s to talk it over."] = "Voll – flüster %s an, um es abzusprechen."
-L["Click a name to whisper."] = "Klick auf einen Namen zum Anflüstern."
 L["Pin your key for a day and a time."] = "Häng deinen Key für einen Tag und eine Uhrzeit aus."
 L["Posting it replaces your earlier posting."] = "Dein früherer Eintrag wird damit ersetzt."
 L["Note, e.g. \"a few more keys afterwards\""] = "Notiz, z. B. „danach noch ein paar Keys“"
@@ -203,8 +199,6 @@ L["Timer line spacing"] = "Zeilenabstand des Timers"
 L["How far the timer's lines stand apart. Below 100 % the card is tighter than the design draws it."] =
     "Wie weit die Zeilen des Timers auseinanderstehen. Unter 100 % steht die Karte enger, als der Entwurf sie zeichnet."
 L["Timer font"] = "Schriftart des Timers"
-L["Friz Quadrata & Morpheus is the pairing the timer was drawn in: Morpheus for the head and the clock."] =
-    "Friz Quadrata & Morpheus ist das Paar, in dem der Timer entworfen wurde: Morpheus für Kopfzeile und Uhr."
 L["Timer background"] = "Hintergrund des Timers"
 L["Timer text"] = "Schriftfarbe des Timers"
 L["The timer looks as designed again."] = "Der Timer sieht wieder aus wie entworfen."
@@ -240,3 +234,31 @@ L["Data is saved when you log out or type /reload."] =
     "Gespeichert wird beim Ausloggen oder mit /reload."
 L["Commands: /rk window, /rk preview, /rk options, /rk minimap, /rk timer, /rk reset, /rk debug"] =
     "Befehle: /rk window, /rk preview, /rk options, /rk minimap, /rk timer, /rk reset, /rk debug"
+
+L["Colour theme"] = "Farbtheme"
+L["Colours for the window, board, timer and tooltip. Choosing a theme resets the timer background and text colours; you can customise them afterwards."] =
+    "Farben für Fenster, Pinnwand, Timer und Tooltip. Die Auswahl setzt Timerhintergrund und Textfarbe auf das Theme zurück; anschließend kannst du sie individuell anpassen."
+L["(unavailable)"] = "(nicht verfügbar)"
+L["Choose independently for this display. Additional fonts appear when an installed SharedMedia provider supplies them."] =
+    "Für diese Anzeige unabhängig wählen. Weitere Schriftarten erscheinen, wenn ein installiertes SharedMedia-Addon sie bereitstellt."
+L["PT Sans Narrow by ParaType, SIL Open Font License"] =
+    "PT Sans Narrow von ParaType, SIL Open Font License"
+
+L["Time format"] = "Uhrzeitformat"
+L["How the key board writes a posting's time. \"As the game's clock\" follows the 24-hour setting of the game's own clock."] =
+    "Wie die Pinnwand die Uhrzeit einer Pinnung schreibt. „Wie die Uhr des Spiels“ folgt der 24-Stunden-Einstellung der Uhr im Spiel."
+L["As the game's clock"] = "Wie die Uhr des Spiels"
+L["24 hours (22:15)"] = "24 Stunden (22:15)"
+L["12 hours (10:15 PM)"] = "12 Stunden (10:15 PM)"
+L["Date format"] = "Datumsformat"
+L["How the key board writes a posting's day. \"As the game's language\" writes it the way the language of your game does."] =
+    "Wie die Pinnwand den Tag einer Pinnung schreibt. „Nach der Sprache des Spiels“ schreibt ihn so, wie es die Sprache deines Spiels tut."
+L["As the game's language"] = "Nach der Sprache des Spiels"
+L["Day.Month. (13.09.)"] = "Tag.Monat. (13.09.)"
+L["Month/Day (09/13)"] = "Monat/Tag (09/13)"
+L["Year-Month-Day (2026-09-13)"] = "Jahr-Monat-Tag (2026-09-13)"
+
+L["Click: make this your main"] = "Klick: zum Main machen"
+L["Make %s your main? The rating goals are then planned on this character's runs."] =
+    "%s zum Main machen? Die Zielwertung plant dann mit den Läufen dieses Charakters."
+L["main: %s"] = "Main: %s"
