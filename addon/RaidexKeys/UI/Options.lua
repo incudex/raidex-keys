@@ -189,6 +189,9 @@ local function addGeneral(settings)
         function(value) settings.grid = value end,
         function(value) return value == 0 and L["off"] or tostring(value) end,
         function() end)
+
+    checkbox("gridResize", "gridResize", settings, L["Grid when resizing"], true,
+        L["The window's size changes in the same steps while you drag its lower right corner."])
 end
 
 local function addWindow(settings)
@@ -383,6 +386,7 @@ function T.ResetToDefaults()
     window.timeFormat, window.dateFormat = "auto", "auto"
     window.w, window.h = nil, nil
     T.DB:Settings().grid = T.GRID_DEFAULT
+    T.DB:Settings().gridResize = true
     T.Window:Restyle()
 end
 

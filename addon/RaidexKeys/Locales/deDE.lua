@@ -68,6 +68,9 @@ L["Show minimap button"] = "Minimap-Button anzeigen"
 L["Window font"] = "Schriftart des Fensters"
 L["Window font size"] = "Schriftgröße des Fensters"
 L["Grid when moving"] = "Raster beim Verschieben"
+L["Grid when resizing"] = "Raster beim Größenändern"
+L["The window's size changes in the same steps while you drag its lower right corner."] =
+    "Die Größe des Fensters ändert sich in denselben Schritten, während du seine rechte untere Ecke ziehst."
 L["The window and the timer move in steps of this many points while you drag them, so they line up. Off moves them freely."] =
     "Fenster und Timer bewegen sich beim Ziehen in Schritten dieser Größe und richten sich so aneinander aus. „Aus“ verschiebt sie frei."
 L["off"] = "aus"

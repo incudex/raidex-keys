@@ -8,7 +8,7 @@ local C = T.Themes.Colors
 local textColors, textureColors = {}, {}
 
 local BASE_SIZE = 13
-Window.SIZE_MIN, Window.SIZE_MAX, Window.DEFAULT_SIZE = 10, 18, BASE_SIZE
+Window.SIZE_MIN, Window.SIZE_MAX, Window.DEFAULT_SIZE = 10, 18, 12
 
 local BASE = {
     W = 620,
@@ -1266,10 +1266,11 @@ local function createGrip()
         if button ~= "LeftButton" then return end
         remember()
         place()
-        frame:StartSizing("BOTTOMRIGHT")
+        local minW, minH = minSize()
+        T.BeginSizing(frame, minW, minH, UIParent:GetWidth() or 4096, UIParent:GetHeight() or 4096)
     end)
     R.grip:SetScript("OnMouseUp", function()
-        frame:StopMovingOrSizing()
+        T.EndSizing(frame)
         Window:KeepSize()
         remember()
         place()

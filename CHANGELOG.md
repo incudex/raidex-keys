@@ -3,6 +3,25 @@
 What changed in each release of the Raidex Keys addon. The files are on
 [GitHub releases](https://github.com/incudex/raidex-keys/releases).
 
+## 0.7.0 – 2026-09-15
+
+- The raid calendar's **guild progress is there at once**, in either client
+  language: the guild's achievements are read whole, not only those the game's
+  achievement window had shown, which left a raid at 0/8 - or without any
+  progress - until that window had been opened. Raid, bosses and difficulty
+  are matched by their ids, and the best progress known stays over a
+  `/reload`.
+- The key board's postings and sign-ups **reach the guild at once**: a
+  message over the game's throttle - which every addon shares - was dropped
+  and came only with the next comparison, up to 15 minutes later.
+- A new install starts with the **Slate** colour theme, the window's text at
+  size 12 and the timer at 80 % opacity. Settings already made stay as they
+  are; the options' Defaults button and `/rk reset` bring the new ones.
+- The window's **size moves on the grid** as well while its lower right corner
+  is dragged. "Grid when resizing" in the options switches that off.
+- A key board posting's **key level wears the theme's colour**; it stayed
+  Raidex violet in every theme.
+
 ## 0.6.0 – 2026-09-15
 
 - A **raid calendar** in the new tab *Raids*: the raids your guild enters in

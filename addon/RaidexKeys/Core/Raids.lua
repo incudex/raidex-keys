@@ -321,7 +321,7 @@ local function listedInstance(event)
     found = exact or found
     local single = next(difficulties) == nil or next(difficulties, next(difficulties)) == nil
     local id = (exact or single) and Plain(found.difficultyId) or nil
-    return Plain(found.title), difficultyOf(id, named)
+    return Plain(found.title), difficultyOf(id, named), Plain(found.mapId), id
 end
 
 local function openedInstance(info)
@@ -329,7 +329,8 @@ local function openedInstance(info)
     local textures = index and C_Calendar.EventGetTextures and C_Calendar.EventGetTextures(Plain(info.eventType))
     local texture = textures and textures[index]
     if not texture then return nil end
-    return Plain(texture.title), difficultyOf(Plain(texture.difficultyId))
+    local id = Plain(texture.difficultyId)
+    return Plain(texture.title), difficultyOf(id), Plain(texture.mapId), id
 end
 
 local function locate(raid)
@@ -387,15 +388,17 @@ function Raids:Read()
                         local key = raidKey(Plain(event.eventID), creator, title, t.year, t.month, t.day)
                         local editable = C_Calendar.ContextMenuEventCanEdit
                             and select(2, pcall(C_Calendar.ContextMenuEventCanEdit, monthOffset, t.day, index))
-                        local instanceName, difficultyName = listedInstance(event)
+                        local instanceName, difficultyName, instanceMap, difficultyId = listedInstance(event)
                         local kept = guild and guild.events[key]
                         if kept and kept.instanceName then
                             instanceName, difficultyName = kept.instanceName, kept.difficultyName
+                            instanceMap, difficultyId = kept.instanceMap, kept.difficultyId
                         end
                         found[key] = { key = key, title = title, at = at, creator = creator,
                             year = t.year, month = t.month, day = t.day, modStatus = Plain(event.modStatus),
                             canEdit = Plain(editable) == true,
-                            instanceName = instanceName, difficultyName = difficultyName }
+                            instanceName = instanceName, difficultyName = difficultyName,
+                            instanceMap = instanceMap, difficultyId = difficultyId }
                     end
                 end
             end
@@ -438,17 +441,20 @@ local function readInvites(key)
     end
     local info = C_Calendar.GetEventInfo and C_Calendar.GetEventInfo()
     local description = info and oneLine(Plain(info.description))
-    local instanceName, difficultyName
-    if info then instanceName, difficultyName = openedInstance(info) end
+    local instanceName, difficultyName, instanceMap, difficultyId
+    if info then instanceName, difficultyName, instanceMap, difficultyId = openedInstance(info) end
     local guild, raid = store(), raids[key]
     if guild and raid and instanceName then
         local event = record(guild, key)
         event.at = event.at or raid.at
         event.instanceName, event.difficultyName = instanceName, difficultyName
+        event.instanceMap, event.difficultyId = instanceMap, difficultyId
         raid.instanceName, raid.difficultyName = instanceName, difficultyName
+        raid.instanceMap, raid.difficultyId = instanceMap, difficultyId
     end
     invites[key] = { readAt = GetServerTime(), who = who, note = description ~= "" and description or nil,
-        instanceName = instanceName, difficultyName = difficultyName }
+        instanceName = instanceName, difficultyName = difficultyName,
+        instanceMap = instanceMap, difficultyId = difficultyId }
     changed()
 end
 
@@ -659,90 +665,164 @@ end
 local PROGRESS_FRESH = 60
 local PROGRESS_RETRY = 5
 
-local raidJournal
+local journal
 local raidBosses = {}
 local progress = {}
 
-local function bossesOf(name)
-    if raidBosses[name] then return raidBosses[name] end
+local function readJournal()
+    local found = { byMap = {}, byName = {} }
+    local theirs = EJ_GetCurrentTier()
+    for tier = 1, Plain(EJ_GetNumTiers()) or 0 do
+        EJ_SelectTier(tier)
+        local i = 1
+        while true do
+            local instanceId, raidName, _, _, _, _, _, _, _, _, mapId = EJ_GetInstanceByIndex(i, true)
+            instanceId, raidName, mapId = Plain(instanceId), Plain(raidName), Plain(mapId)
+            if not instanceId then break end
+            if mapId and not found.byMap[mapId] then found.byMap[mapId] = instanceId end
+            if raidName and not found.byName[raidName] then found.byName[raidName] = instanceId end
+            i = i + 1
+        end
+    end
+    if theirs then EJ_SelectTier(theirs) end
+    return found
+end
+
+local function lookup(name, mapId)
+    if not journal then return nil end
+    return mapId and journal.byMap[mapId] or name and journal.byName[name] or nil
+end
+
+local function journalInstance(name, mapId)
+    local instanceId = lookup(name, mapId)
+    if instanceId then return instanceId end
+    journal = readJournal()
+    return lookup(name, mapId)
+end
+
+local function bossesOf(name, mapId)
     if not (EJ_GetNumTiers and EJ_SelectTier and EJ_GetCurrentTier and EJ_GetInstanceByIndex
         and EJ_SelectInstance and EJ_GetEncounterInfoByIndex) then
         return nil
     end
-    if not raidJournal then
-        local journal = {}
-        local theirs = EJ_GetCurrentTier()
-        for tier = 1, Plain(EJ_GetNumTiers()) or 0 do
-            EJ_SelectTier(tier)
-            local i = 1
-            while true do
-                local instanceId, raidName = EJ_GetInstanceByIndex(i, true)
-                if not instanceId then break end
-                if raidName and not journal[raidName] then journal[raidName] = instanceId end
-                i = i + 1
-            end
-        end
-        if theirs then EJ_SelectTier(theirs) end
-        if next(journal) then raidJournal = journal end
-    end
-    local instanceId = raidJournal and raidJournal[name]
+    local instanceId = journalInstance(name, mapId)
     if not instanceId then return nil end
+    if raidBosses[instanceId] then return raidBosses[instanceId] end
     local theirs = EncounterJournal and EncounterJournal.instanceID
     EJ_SelectInstance(instanceId)
     local list, i = {}, 1
     while true do
-        local boss = Plain(EJ_GetEncounterInfoByIndex(i))
+        local boss, _, _, _, _, _, encounterId = EJ_GetEncounterInfoByIndex(i, instanceId)
+        boss = Plain(boss)
         if not boss then break end
-        list[#list + 1] = boss
+        list[#list + 1] = { name = boss, encounter = Plain(encounterId) }
         i = i + 1
     end
     if type(theirs) == "number" then EJ_SelectInstance(theirs) end
-    if #list > 0 then raidBosses[name] = list end
-    return raidBosses[name]
+    if #list > 0 then raidBosses[instanceId] = list end
+    return raidBosses[instanceId]
 end
 
-function Raids.Progress(raidName, difficultyName)
-    if not (raidName and difficultyName and GetGuildCategoryList and GetCategoryNumAchievements
+function Raids.Progress(raidName, difficultyName, mapId, difficultyId)
+    local difficultyText = difficultyId and GetDifficultyInfo and Plain((GetDifficultyInfo(difficultyId)))
+        or difficultyName
+    if not ((raidName or mapId) and difficultyText and GetGuildCategoryList and GetCategoryNumAchievements
         and GetAchievementInfo) then
         return nil
     end
-    local cacheKey = raidName .. "|" .. difficultyName
+    local cacheKey = tostring(mapId or raidName) .. "|" .. tostring(difficultyId or difficultyText)
     local held = progress[cacheKey]
-    if held and GetTime() - held.at < (held.killed and PROGRESS_FRESH or PROGRESS_RETRY) then
+    local fresh = held and held.killed and held.killed > 0 and PROGRESS_FRESH or PROGRESS_RETRY
+    if held and GetTime() - held.at < fresh then
         return held.killed, held.bosses
     end
 
-    local bosses = bossesOf(raidName) or {}
-    local killed, spoken = 0, false
-    local isBoss, down = {}, {}
-    for _, boss in ipairs(bosses) do isBoss[boss] = true end
+    local bosses = bossesOf(raidName, mapId) or {}
+    local byEncounter, byName, down, spoken = {}, {}, {}, false
+    for i, boss in ipairs(bosses) do
+        if boss.encounter then byEncounter[boss.encounter] = i end
+        byName[boss.name] = i
+    end
     for _, category in ipairs(#bosses > 0 and GetGuildCategoryList() or {}) do
-        for index = 1, Plain((GetCategoryNumAchievements(category))) or 0 do
+        for index = 1, Plain((GetCategoryNumAchievements(category, true))) or 0 do
             local id, name, _, completed, _, _, _, description = GetAchievementInfo(category, index)
             id, name, description = Plain(id), Plain(name) or "", Plain(description) or ""
-            if id and (name .. " " .. description):find(difficultyName, 1, true) then
+            if id and (name .. " " .. description):find(difficultyText, 1, true) then
                 for criterion = 1, GetAchievementNumCriteria and Plain(GetAchievementNumCriteria(id)) or 0 do
-                    local text, _, done = GetAchievementCriteriaInfo(id, criterion)
-                    text = Plain(text)
-                    if text and isBoss[text] then
+                    local text, _, done, quantity, required, _, _, asset = GetAchievementCriteriaInfo(id, criterion)
+                    asset, text = Plain(asset), Plain(text)
+                    local boss = asset and byEncounter[asset] or text and byName[text]
+                    if boss then
                         spoken = true
-                        if Plain(done) then down[text] = true end
+                        quantity, required = Plain(quantity), Plain(required)
+                        if Plain(done) or (quantity and required and required > 0 and quantity >= required) then
+                            down[boss] = true
+                        end
                     end
                 end
-                for _, boss in ipairs(bosses) do
-                    if name:find(boss, 1, true) then
+                for i, boss in ipairs(bosses) do
+                    if name:find(boss.name, 1, true) then
                         spoken = true
-                        if Plain(completed) then down[boss] = true end
+                        if Plain(completed) then down[i] = true end
                     end
                 end
             end
         end
     end
+    local killed = 0
     for _ in pairs(down) do killed = killed + 1 end
     held = { at = GetTime() }
     if spoken then held.killed, held.bosses = killed, #bosses end
+    local guild = store()
+    if guild then
+        guild.progress = guild.progress or {}
+        local kept = guild.progress[cacheKey]
+        if held.killed and (not kept or held.killed >= kept.killed) then
+            guild.progress[cacheKey] = { killed = held.killed, bosses = held.bosses }
+        elseif kept then
+            held.killed, held.bosses = kept.killed, kept.bosses
+        end
+    end
     progress[cacheKey] = held
     return held.killed, held.bosses
+end
+
+function Raids.ForgetProgress()
+    progress = {}
+end
+
+function Raids.DebugCriteria(name, mapId, difficultyName, difficultyId)
+    local bosses = bossesOf(name, mapId) or {}
+    local difficultyText = difficultyId and GetDifficultyInfo and Plain((GetDifficultyInfo(difficultyId)))
+        or difficultyName
+    local byEncounter, byName, parts = {}, {}, {}
+    for _, boss in ipairs(bosses) do
+        if boss.encounter then byEncounter[boss.encounter] = true end
+        byName[boss.name] = true
+    end
+    for _, category in ipairs(difficultyText and #bosses > 0 and GetGuildCategoryList() or {}) do
+        for index = 1, Plain((GetCategoryNumAchievements(category, true))) or 0 do
+            local id, title, _, _, _, _, _, description = GetAchievementInfo(category, index)
+            id, title, description = Plain(id), Plain(title) or "", Plain(description) or ""
+            if id and (title .. " " .. description):find(difficultyText, 1, true) then
+                for criterion = 1, Plain(GetAchievementNumCriteria(id)) or 0 do
+                    local text, kind, done, quantity, required, _, _, asset = GetAchievementCriteriaInfo(id, criterion)
+                    if byEncounter[Plain(asset)] or byName[Plain(text)] then
+                        parts[#parts + 1] = ("%s=%s/%s/%s/%s/%s"):format(tostring(Plain(text)), tostring(Plain(kind)),
+                            tostring(Plain(done)), tostring(Plain(quantity)), tostring(Plain(required)), tostring(Plain(asset)))
+                    end
+                end
+            end
+        end
+    end
+    return #parts > 0 and table.concat(parts, "; ") or "no criterion of its bosses"
+end
+
+function Raids.DebugBosses(name, mapId)
+    local bosses = bossesOf(name, mapId) or {}
+    local ids = {}
+    for _, boss in ipairs(bosses) do ids[#ids + 1] = tostring(boss.encounter) end
+    return ("journal %s, %d bosses (%s)"):format(tostring(lookup(name, mapId)), #bosses, table.concat(ids, " "))
 end
 
 function Raids.Build(key, raid, signups, player, calendar)
@@ -784,8 +864,11 @@ function Raids.Build(key, raid, signups, player, calendar)
     local opened = calendar and calendar.instanceName and calendar
     local instanceName = opened and opened.instanceName or raid.instanceName
     local difficultyName = opened and opened.difficultyName or raid.difficultyName
+    local instanceMap = opened and opened.instanceMap or raid.instanceMap
+    local difficultyId = opened and opened.difficultyId or raid.difficultyId
     return { key = key, title = raid.title, at = raid.at, creator = raid.creator,
         instanceName = instanceName, difficultyName = difficultyName,
+        instanceMap = instanceMap, difficultyId = difficultyId,
         instance = instanceText(instanceName, difficultyName), note = calendar and calendar.note,
         signups = list, counts = counts, mine = mine }
 end
@@ -799,7 +882,8 @@ function Raids:View()
         if raid.at + Raids.KEEP_AFTER >= now then
             local event = guild.events[key]
             local built = Raids.Build(key, raid, event and event.signups, player, invites[key])
-            built.killed, built.bosses = Raids.Progress(built.instanceName, built.difficultyName)
+            built.killed, built.bosses = Raids.Progress(built.instanceName, built.difficultyName,
+                built.instanceMap, built.difficultyId)
             list[#list + 1] = built
         end
     end
@@ -837,6 +921,9 @@ function Raids:Start()
         end)
     end
     Addon:On("CALENDAR_OPEN_EVENT", onOpenEvent)
+    for _, event in ipairs({ "RECEIVED_ACHIEVEMENT_LIST", "CRITERIA_UPDATE", "ACHIEVEMENT_EARNED" }) do
+        Addon:On(event, Raids.ForgetProgress)
+    end
     Addon:On("CALENDAR_UPDATE_INVITE_LIST", onInviteList)
     C_Timer.After(LOAD_AFTER_LOGIN, function() Raids:Load() end)
     C_Timer.After(DIGEST_AFTER_LOGIN, function() Raids:SendDigest() end)

@@ -282,7 +282,11 @@ local function showParts(parts, on)
     for _, name in ipairs(parts) do pane[name]:SetShown(on) end
 end
 
-local KEY_COLOR = "|cffa78bff"
+local function keyColor()
+    local glow = C.glow
+    return ("|cff%02x%02x%02x"):format(math.floor(glow[1] * 255 + 0.5), math.floor(glow[2] * 255 + 0.5),
+        math.floor(glow[3] * 255 + 0.5))
+end
 
 local function drawPost()
     local post = T.Board:Find(postId)
@@ -291,7 +295,7 @@ local function drawPost()
         return
     end
     showParts(FORM_PARTS, false)
-    pane.title:SetText(("%s+%d|r %s"):format(KEY_COLOR, post.level or 0, W.MapName(post.mapId) or "?"))
+    pane.title:SetText(("%s+%d|r %s"):format(keyColor(), post.level or 0, W.MapName(post.mapId) or "?"))
     pane.sub:SetText(("%s · %s · %s"):format(BoardPane.DayText(post.at), BoardPane.TimeText(post.at), L["Key holder:"]))
     pane.holderName = post.holder
     pane.holder:SetLabel(named(post.name, post.classFile))
@@ -338,7 +342,7 @@ local function drawForm()
     showParts(FORM_PARTS, true)
 
     local mapId, level = T.Snapshot:OwnKey()
-    pane.title:SetText(mapId and ("%s+%d|r %s"):format(KEY_COLOR, level, W.MapName(mapId) or "?") or L["No keystone in your bags."])
+    pane.title:SetText(mapId and ("%s+%d|r %s"):format(keyColor(), level, W.MapName(mapId) or "?") or L["No keystone in your bags."])
     pane.sub:SetText(T.Board:OwnPost() and L["Posting it replaces your earlier posting."] or L["Pin your key for a day and a time."])
     pane.dayLabel:SetText(BoardPane.DayText(BoardPane.FormTime(form.day, 0)))
     pane.timeLabel:SetText(BoardPane.ClockText(form.minutes))

@@ -13,19 +13,20 @@ local defaults = {
     raids = {},
     settings = {
         shareWithGuild = true,
-        theme = "raidex",
+        theme = "slate",
         introSeen = false,
         grid = T.GRID_DEFAULT,
+        gridResize = true,
         minimap = { hide = false, angle = 225 },
         timer = {
             enabled = true, hideBlizzard = true, hideQuests = false,
             announce = true, bossTimes = true,
-            alpha = 0.75, font = "frizqt", fontSize = 11, spacing = 0.75,
+            alpha = 0.8, font = "frizqt", fontSize = 11, spacing = 0.75,
             showAffixes = false, showScore = true, maxBosses = 6, scale = 0.9,
-            background = { 0.035, 0.043, 0.094 },
-            text = { 0.910, 0.918, 0.965 },
+            background = { 0.094, 0.110, 0.137 },
+            text = { 0.941, 0.953, 0.973 },
         },
-        window = { font = "marcellus", fontSize = 13, timeFormat = "auto", dateFormat = "auto" },
+        window = { font = "marcellus", fontSize = 12, timeFormat = "auto", dateFormat = "auto" },
     },
 }
 

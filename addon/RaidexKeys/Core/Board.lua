@@ -131,8 +131,14 @@ local function pump()
         return
     end
     if not canSend() then return end
-    local item = table.remove(queue, 1)
-    C_ChatInfo.SendAddonMessage(item.prefix, item.message, "GUILD")
+    local item = queue[1]
+    local result = C_ChatInfo.SendAddonMessage(item.prefix, item.message, "GUILD")
+    local results = Enum and Enum.SendAddonMessageResult
+    if results and (result == results.AddonMessageThrottle or result == results.ChannelThrottle
+        or result == results.AddOnMessageLockdown) then
+        return
+    end
+    table.remove(queue, 1)
 end
 
 local function send(prefix, message)

@@ -2,7 +2,7 @@ local _, T = ...
 
 local Themes = {}
 T.Themes = Themes
-Themes.DEFAULT = "raidex"
+Themes.DEFAULT = "slate"
 Themes.List = {
     { key = "raidex", name = "Raidex" },
     { key = "polar-night", name = "Nord — Polar Night" },
@@ -81,7 +81,7 @@ end
 function Themes.TimerDefaults()
     local current = Themes.Current()
     local c = Themes.Palettes[current]
-    return current == Themes.DEFAULT and CLASSIC_TIMER_BACK or c.bg, c.text
+    return current == "raidex" and CLASSIC_TIMER_BACK or c.bg, c.text
 end
 
 function Themes.Apply()

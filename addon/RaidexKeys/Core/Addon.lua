@@ -88,6 +88,36 @@ function T.BeginDrag(frame)
     end)
 end
 
+function T.BeginSizing(frame, minW, minH, maxW, maxH)
+    local settings = T.DB:Settings()
+    local step = settings.grid
+    if step <= 0 or settings.gridResize == false then
+        frame:StartSizing("BOTTOMRIGHT")
+        return
+    end
+    local scale = frame:GetEffectiveScale()
+    local x, y = GetCursorPosition()
+    local startX, startY = x / scale, y / scale
+    local startW, startH = frame:GetWidth(), frame:GetHeight()
+    frame.gridSizing = true
+    dragDriver:SetScript("OnUpdate", function()
+        local cursorX, cursorY = GetCursorPosition()
+        local per = frame:GetEffectiveScale() / UIParent:GetEffectiveScale()
+        local width = T.Snap((startW + cursorX / scale - startX) * per, step) / per
+        local height = T.Snap((startH + startY - cursorY / scale) * per, step) / per
+        frame:SetSize(math.max(minW, math.min(maxW, width)), math.max(minH, math.min(maxH, height)))
+    end)
+end
+
+function T.EndSizing(frame)
+    if frame.gridSizing then
+        frame.gridSizing = nil
+        dragDriver:SetScript("OnUpdate", nil)
+    else
+        frame:StopMovingOrSizing()
+    end
+end
+
 function T.EndDrag(frame)
     if frame.gridDrag then
         frame.gridDrag = nil
@@ -216,9 +246,13 @@ function Addon:PrintDebug()
     show("run history (all weeks)", history and #history)
 
     show("guild raids in the calendar (count, first key)", T.Raids:DebugInfo())
-    local firstRaid = (T.Raids:View() or {})[1]
-    show("first raid (instance, guild progress)", firstRaid and firstRaid.instance,
-        firstRaid and firstRaid.bosses and (firstRaid.killed .. "/" .. firstRaid.bosses))
+    for _, raid in ipairs(T.Raids:View() or {}) do
+        show("raid " .. raid.key, ("%s, map %s, difficulty %s, %s, progress %s"):format(tostring(raid.instanceName),
+            tostring(raid.instanceMap), tostring(raid.difficultyId), T.Raids.DebugBosses(raid.instanceName, raid.instanceMap),
+            raid.bosses and (raid.killed .. "/" .. raid.bosses) or "none"))
+        show("criteria " .. raid.key, T.Raids.DebugCriteria(raid.instanceName, raid.instanceMap,
+            raid.difficultyName, raid.difficultyId))
+    end
 
     local guid = T.Plain(UnitGUID("player"))
     local char = guid and T.DB:Data().chars[guid]

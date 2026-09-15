@@ -4,7 +4,7 @@ local L, Plain = T.L, T.Plain
 local Timer = {}
 T.Timer = Timer
 
-local DEFAULT_ALPHA = 0.75
+local DEFAULT_ALPHA = 0.8
 local DEFAULT_SIZE = 11
 local DEFAULT_FONT = "frizqt"
 local DEFAULT_AFFIXES, DEFAULT_SCORE, DEFAULT_BOSSES = false, true, 6
@@ -106,7 +106,7 @@ function Timer.Style()
     local baseBack, baseText = T.Themes.TimerDefaults()
     local text = settings.text or baseText
     local back = settings.background or baseBack
-    local themed = T.Themes.Current() ~= T.Themes.DEFAULT
+    local themed = T.Themes.Current() ~= "raidex"
     local colors, mix = T.Themes.Colors, T.Themes.Mix
     local ramp = themed and { text = colors.text, body = colors.body,
         muted = colors.muted, dim = colors.faint,
@@ -150,6 +150,8 @@ function Timer.Style()
     MAX_BOSSES = clamp(settings.maxBosses or DEFAULT_BOSSES, Timer.BOSSES_MIN, Timer.BOSSES_MAX)
     SCALE = clamp(settings.scale or DEFAULT_SCALE, Timer.SCALE_MIN, Timer.SCALE_MAX)
 end
+
+function Timer.Palette() return C, P end
 
 local DECIMAL = GetLocale() == "deDE" and "," or "."
 
