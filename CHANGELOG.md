@@ -3,6 +3,45 @@
 What changed in each release of the Raidex Keys addon. The files are on
 [GitHub releases](https://github.com/incudex/raidex-keys/releases).
 
+## 0.6.0 – 2026-09-15
+
+- A **raid calendar** in the new tab *Raids*: the raids your guild enters in
+  the game's calendar as guild events of the type raid, today and the next two
+  weeks, with a sign-up as tank, healer or damage dealer - which the game's
+  calendar cannot. Signing up here signs you up in the game's calendar too,
+  and taking it back takes it back there. Whoever is signed up in the game's
+  calendar shows up as well, without a role until the raid's creator, a
+  moderator or the guild master picks one - a click on a name offers the
+  three - and they can change any role that way. A click on a raid shows who is in, counted
+  as tanks, healers and damage, in a table of name - its creator with a crown - role with its icon and item level,
+  under the raid's title the raid and its difficulty with the guild's progress
+  in it, as the guild's achievements tell it (3/8), and the note of the
+  game's event. Your sign-up takes a note of its own, such as "I have to leave
+  early"; a sign-up's note shows in the status bar when the mouse is on it. A
+  button per role signs you up or changes your role, and a click on a name
+  whispers them. The sign-ups travel through your guild's addon channel, as
+  the key board's postings do. The list shows each raid's difficulty, under
+  its title the raid's name, and under that a square for every boss - filled
+  for those your guild has down.
+- The tabs are a little narrower, so six fit beside "Post your key".
+- The Mythic+ timer **says nothing at the start** of a key any more: the game
+  swallowed "Raidex Keys loaded for …" and "Timer started …" anyway. The end
+  still reaches the group; the option is now called "The run's end in the
+  group chat". **Put away, the timer says nothing**: no boss times, no end.
+- The Mythic+ timer **switched off in the options stays off**. The next key
+  turned it on again, and its chat lines with it (a player's report). A
+  shift-click on the timer or a ctrl-click on the minimap button still hides
+  it only until the next key.
+- A ctrl-click on the minimap button **hides and shows the timer without a
+  line in the chat**.
+- A timer switched off in the options **keeps no boss times from the chest**:
+  it wrote the time of the chest as every open boss's best time.
+- The options' **Defaults** button leaves the affixes off, as the timer ships,
+  and puts the preview's level back to +12.
+- The mouse wheel over an open posting of the key board **no longer scrolls
+  the list behind it**.
+- Closing the window with Escape **ends `/rk preview`** as its button does.
+
 ## 0.5.0 – 2026-09-15
 
 - Five **colour themes** for the window, the key board, the timer and the
@@ -51,11 +90,11 @@ What changed in each release of the Raidex Keys addon. The files are on
 
 ## 0.4.0 – 2026-09-13
 
-- A new **Zielwertung** tab: the fewest runs that lift your
+- A new **Rating goals** tab: the fewest runs that lift your
   character to 2500, 3000 and 3500 M+ rating, each at the lowest level that
   does it, with what each adds - and who holds a key for it: your alts, your
   group or your guild.
-- The **Pinnwand** tab is your guild's key board. Pin your key for a day and a
+- The **Board** tab is your guild's key board. Pin your key for a day and a
   time with a note - "a few more keys afterwards" - and guild members sign up
   for it, as tank, healer or damage, ten at most, so you can still talk it
   over with those who come too late. The count reads against a group of five -
@@ -66,7 +105,7 @@ What changed in each release of the Raidex Keys addon. The files are on
   left it open. Closed with its button, Escape or the minimap, it stays closed.
   Guild names **wear their class colour at once**: the classes from the guild
   roster are kept, where they stood white for seconds after every `/reload`.
-- The **rating column's head fits**: "WERTUNG" and the board's "SIGNED UP"
+- The **rating column's head fits**: the German "WERTUNG" and the board's "SIGNED UP"
   were wider than their column and cut short.
 - The key's **start is said to you** now, not to the group: during a key the
   game keeps addons out of the group chat, and the lines never arrived.
@@ -79,21 +118,21 @@ What changed in each release of the Raidex Keys addon. The files are on
   every boss came again with the final time, and the card showed that time for
   each.
 - The addon has a **window** of its own now, as the design draws it: the tabs
-  Twinks, Gruppe und Gilde over one table - character, dungeon, key, this
+  Alts, Group and Guild over one table - character, dungeon, key, this
   week's runs, the Great Vault and the M+ rating, the biggest key first. Over
   it stand the week's affixes and how long it is until the reset. A left-click
   on the minimap button opens it (the options moved to shift-click), and so
   does `/rk window`. It reads what is stored, so every alt is in it without
   logging in.
 - The **column heads sort** the table - a second click turns the order around
-  - and the Gilde tab, sorted by dungeon, **groups the keys under it**, with
+  - and the Guild tab, sorted by dungeon, **groups the keys under it**, with
   how many stand there. A click on a tab puts its order back.
-- The Twinks tab shows **this week's runs** as a small square each, filled
+- The Alts tab shows **this week's runs** as a small square each, filled
   where the key was timed, and beside the Great Vault slots the **item level**
   its best unlocked slot would give. Every tab says **how long ago** a row was
   last heard of.
-- **Your own character stands first** and wears the violet edge, in Twinks and
-  in Gruppe.
+- **Your own character stands first** and wears the violet edge, in Alts and
+  in Group.
 - A **right-click on a row** puts its key into the chat: your own as the link
   out of your bags, anyone else's as name, dungeon and level.
 - The window's **font is yours to pick** (Options -> AddOns -> Raidex Keys):
@@ -122,9 +161,9 @@ What changed in each release of the Raidex Keys addon. The files are on
   Mythic+ timer have pages of their own, and the timer's page is divided into
   what it does during a key, what it says in the chat, the preview and its
   look.
-- The tabs read **Gilde, Twinks, Gruppe**. The affixes over them are set
+- The tabs read **Guild, Alts, Group**. The affixes over them are set
   small and stop before the countdown; the name and the dungeon have more room,
-  and the window is a little wider for it. **Einstellungen** in the header
+  and the window is a little wider for it. **Options** in the header
   can be clicked now - the frame that drags the window lay over it.
 - The column heads **all show**: in game three of the four stood empty. The
   name and the dungeon share the room that is left - a name up to its realm,
@@ -134,17 +173,17 @@ What changed in each release of the Raidex Keys addon. The files are on
 - The panel's **Defaults** puts back what is not a setting as well: where the
   timer, the window and the minimap button stand, and the timer's two colours.
   `/rk reset` does the same.
-- The **Gilde tab counts you in**: your own key stands beside the guild's,
+- The **Guild tab counts you in**: your own key stands beside the guild's,
   which means the tab holds real keys from the first day in a guild rather
   than sample values. Guild names wear their class colour now - a keystone
   message carries no class, so it comes from the guild roster - and opening
   the window asks the guild again, at most once a minute.
 - The **footer says what is stored**, never what is on screen: it counts the
   characters, the group with the keys known in it, and the guild with its keys
-  of the week. Where nothing is stored it says so - "Noch keine Charaktere
-  gespeichert", "nicht in einer Gruppe", "keine Gilde".
+  of the week. Where nothing is stored it says so - "No characters stored yet",
+  "not in a group", "not in a guild".
 - Two alts of the same name on different realms are told apart by the realm
-  in the Twinks tab.
+  in the Alts tab.
 - `/rk preview` shows **every surface with sample values at once** - window,
   minimap tooltip and Mythic+ timer - so the look can be judged and each piece
   dragged into place without a keystone, a group or a guild. A tab with
@@ -155,7 +194,7 @@ What changed in each release of the Raidex Keys addon. The files are on
   ships, the size of the text, and the background and text colour. The grey
   tones follow the colours you pick, so one choice never leaves the rest
   behind, while the colours that mean something - the keystone level, the
-  clock, the time deaths cost - stay where they are. "Zurück zum Entwurf",
+  clock, the time deaths cost - stay where they are. The way back to the designed look,
   or `/rk reset`, puts the designed look back if a colour turns out
   unreadable.
 - The ticks beside the bosses are **drawn** now, not written: Friz Quadrata
@@ -180,7 +219,7 @@ What changed in each release of the Raidex Keys addon. The files are on
   the chest appears, and the timer went with it - before you could read what
   the run took, what it was worth and what the deaths cost. It now stands as
   it stood until you leave the dungeon or start the next key.
-- **"Questverfolgung ausblenden"** (Options -> AddOns -> Raidex Keys): with it
+- **"Hide the quest tracker"** (Options -> AddOns -> Raidex Keys): with it
   ticked, the tracked quests, campaigns and achievements go while a keystone
   runs and come back when it ends - the "All Objectives" bar with them, which
   is what is left standing over the card when nothing is tracked. The screen

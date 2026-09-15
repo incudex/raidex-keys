@@ -10,6 +10,9 @@ local DEFAULT_FONT = "frizqt"
 local DEFAULT_AFFIXES, DEFAULT_SCORE, DEFAULT_BOSSES = false, true, 6
 local DEFAULT_SCALE = 0.9
 local DEFAULT_SPACING = 0.75
+Timer.DEFAULT_ALPHA, Timer.DEFAULT_SIZE, Timer.DEFAULT_FONT = DEFAULT_ALPHA, DEFAULT_SIZE, DEFAULT_FONT
+Timer.DEFAULT_AFFIXES, Timer.DEFAULT_SCORE, Timer.DEFAULT_BOSSES = DEFAULT_AFFIXES, DEFAULT_SCORE, DEFAULT_BOSSES
+Timer.DEFAULT_SCALE, Timer.DEFAULT_SPACING = DEFAULT_SCALE, DEFAULT_SPACING
 
 local RAMP = {
     text  = { 0.910, 0.918, 0.965 },
@@ -73,8 +76,6 @@ Timer.ALPHA_MIN, Timer.ALPHA_MAX = 0.2, 1
 Timer.SPACING_MIN, Timer.SPACING_MAX = 0.6, 1.5
 Timer.BOSSES_MIN, Timer.BOSSES_MAX = 0, 6
 Timer.SCALE_MIN, Timer.SCALE_MAX = 0.5, 2
-
-Timer.FONTS = T.Fonts.List
 
 local function setFont(region, size, display)
     T.Fonts.Set(region, T.DB:Settings().timer.font, size, "OUTLINE",
@@ -152,7 +153,6 @@ end
 
 local DECIMAL = GetLocale() == "deDE" and "," or "."
 
-Timer.Base = T.Rating.Base
 Timer.Score = T.Rating.Score
 
 function Timer.Clock(seconds)
@@ -287,6 +287,7 @@ end
 local EXAMPLE_LEVEL, EXAMPLE_LIMIT = 12, 1800
 local EXAMPLE_PACE = 1143 / 1800
 local SAMPLE_LEVEL = 8
+Timer.DEFAULT_PREVIEW_LEVEL = EXAMPLE_LEVEL
 
 local function mapInfo(mapId)
     if C_ChallengeMode and C_ChallengeMode.GetMapUIInfo then
@@ -831,7 +832,7 @@ local function render(lines)
     for i = #lines + 1, #rows do hideRow(rows[i]) end
 
     frame:SetSize(width + PADX * 2, y + PADY)
-    if frame:GetScale() ~= SCALE then
+    if math.abs(frame:GetScale() - SCALE) > 0.001 then
         frame:SetScale(SCALE)
         place()
     end
@@ -926,21 +927,12 @@ local function sayToGroupWhenFree(text, looks)
     sayToGroup(text)
 end
 
-local function announce(state)
-    if not T.DB:Settings().timer.announce then return end
-    local mapId, level = T.Snapshot:OwnKey()
-    local link = mapId == state.mapId and level == state.level and T.MinimapButton.KeystoneLink()
-    local key = link or ("|cffa335ee+%d %s|r"):format(state.level, state.name or "?")
-    T.Addon:Print(L["Raidex Keys loaded for %s"]:format(key))
-    local minutes = math.floor((state.limit or 0) / 60 + 0.5)
-    T.Addon:Print(L["Timer started, %d minutes left – Have a great run!"]:format(minutes))
-end
-
 local END_WAIT, END_LOOKS = 1, 8
 
 function Timer.SayEnd(state)
     local run = T.DB:Data().timer.run
-    if not (run and run.holder and T.DB:Settings().timer.announce) then return end
+    local settings = T.DB:Settings().timer
+    if not (run and run.holder and settings.enabled and settings.announce) then return end
     local info = C_ChallengeMode.GetChallengeCompletionInfo and C_ChallengeMode.GetChallengeCompletionInfo()
     local onTime = info and Plain(info.onTime)
     if onTime == nil and state and state.limit and run.finished then onTime = run.finished <= state.limit end
@@ -966,13 +958,12 @@ function Timer.SayEnd(state)
 end
 
 function Timer.SayBoss(criterion, split, state)
-    if not T.DB:Settings().timer.bossTimes then return end
+    local settings = T.DB:Settings().timer
+    if not (settings.enabled and settings.bossTimes) then return end
     local rating, gain = Timer.Projected(state, split, state.limit)
     T.Addon:Print(L["%s in %s minutes, projected rating: %d (+%d)"]:format(
         criterion.name or "?", Timer.Clock(split), rating, gain))
 end
-
-local announcing = false
 
 local lastSeen
 
@@ -1018,21 +1009,18 @@ function Timer:Update()
         if held and #state.criteria < #held.criteria then state.criteria = held.criteria end
         track(state)
         if #state.criteria > 0 then lastSeen = state end
-        if announcing and state.running then
-            announcing = false
-            announce(state)
-        end
         held = state.finished and state or nil
     else
         if held and not (IsInInstance and IsInInstance()) then held = nil end
         state = held
     end
-    fadeBlizzard(state ~= nil and settings.hideBlizzard)
-    fadeQuests(state ~= nil and settings.hideQuests == true)
+    local away = settings.hidden == true and not previewing()
+    fadeBlizzard(state ~= nil and settings.hideBlizzard and not away)
+    fadeQuests(state ~= nil and settings.hideQuests == true and not away)
 
     if previewing() then
         render(Timer.Lines(state or Timer.Preview()))
-    elseif state then
+    elseif state and not away then
         render(Timer.Lines(state))
     else
         if frame then frame:Hide() end
@@ -1067,16 +1055,26 @@ function Timer:SetOptionsPreview(on)
     setPreview("options", on)
 end
 
-function Timer:SetShown(on)
+function Timer.Wanted()
     local settings = T.DB:Settings().timer
-    if (settings.enabled and true or false) == on then return end
-    if T.SetTimerEnabled then
-        T.SetTimerEnabled(on)
+    return settings.enabled == true and not settings.hidden
+end
+
+function Timer:SetShown(on, quiet)
+    local settings = T.DB:Settings().timer
+    if Timer.Wanted() == on then return end
+    settings.hidden = not on or nil
+    if on and not settings.enabled then
+        if T.SetTimerEnabled then
+            T.SetTimerEnabled(true)
+        else
+            settings.enabled = true
+            self:Update()
+        end
     else
-        settings.enabled = on
         self:Update()
     end
-    if not on then
+    if not on and not quiet then
         T.Addon:Print(T.DB:Settings().minimap.hide
             and L["Timer hidden. It comes back with the next key in the font, or with /rk timer."]
             or L["Timer hidden. Ctrl-click the minimap button to bring it back - the next key in the font does it too."])
@@ -1084,7 +1082,7 @@ function Timer:SetShown(on)
 end
 
 function Timer:TogglePreview()
-    if not T.DB:Settings().timer.enabled then
+    if not Timer.Wanted() then
         self:SetShown(true)
         T.Addon:Print(L["The Mythic+ timer is back."])
         return
@@ -1098,7 +1096,6 @@ end
 local EVENTS = {
     "PLAYER_ENTERING_WORLD",
     "ZONE_CHANGED_NEW_AREA",
-    "CHALLENGE_MODE_KEYSTONE_SLOTTED",
     "START_TIMER",
     "CHALLENGE_MODE_RESET",
     "CHALLENGE_MODE_DEATH_COUNT_UPDATED",
@@ -1138,22 +1135,17 @@ function Timer:Start()
         T.Addon:On(event, function() self:Update() end)
     end
     T.Addon:On("CHALLENGE_MODE_KEYSTONE_SLOTTED", function()
-        self:SetShown(true)
+        T.DB:Settings().timer.hidden = nil
         self:Update()
     end)
     T.Addon:On("CHALLENGE_MODE_START", function()
         T.DB:Data().timer.run = nil
         lastSeen, held = nil, nil
-        announcing = true
-        local state = read()
-        if state then
-            announcing = false
-            announce(state)
-        end
-        self:SetShown(true)
+        T.DB:Settings().timer.hidden = nil
         self:Update()
     end)
     T.Addon:On("CHALLENGE_MODE_COMPLETED", function()
+        if not T.DB:Settings().timer.enabled then return end
         self:Update()
         finish()
         Timer.CompleteRun()

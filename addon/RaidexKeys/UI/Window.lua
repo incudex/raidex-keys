@@ -13,28 +13,31 @@ Window.SIZE_MIN, Window.SIZE_MAX, Window.DEFAULT_SIZE = 10, 18, BASE_SIZE
 local BASE = {
     W = 620,
     HEADER = 40, INFO = 24, TABS_H = 26, HEAD_H = 20, ROW_H = 22, GROUP_H = 26, FOOTER_H = 26,
+    TALL_H = 52, NAME_Y = 26, BOSS_Y = 39,
     TABS_GAP = 6,
     PAD = 14, ACCENT = 7, COL_L = 16, COL_R = 16, GAP = 7,
-    TAB_W = 84, ICON = 20, OPTIONS_H = 18, ARROW = 8, GRIP = 16,
+    TAB_W = 76, ICON = 20, OPTIONS_H = 18, ARROW = 8, GRIP = 16,
     DOT = 6, DOT_GAP = 2, SLOT = 9, SLOT_GAP = 4,
     NAME_MAX = 210,
     BAR_W = 4, BAR_HIT = 10, THUMB_MIN = 16,
     EMPTY_HINT = 300, EMPTY_ACTION = 240,
 }
 
-local BASE_COLW = { name = 140, dungeon = 122, key = 34, week = 54, vault = 62, sync = 60, rating = 52 }
+local BASE_COLW = { name = 140, dungeon = 122, key = 34, week = 54, vault = 62, sync = 60, rating = 52,
+    difficulty = 76 }
 
 local ROWS, MIN_ROWS = 12, 4
 local DOTS = 7
 local ICON = "Interface\\AddOns\\RaidexKeys\\Media\\Icon"
 local SORTABLE = { name = true, dungeon = true, key = true, week = true, vault = true, sync = true, rating = true }
 
-local TABS = { "guild", "chars", "party", "goal", "board" }
+local TABS = { "guild", "chars", "party", "goal", "board", "raids" }
 local SORTED = { guild = true, chars = true, party = true }
 
 local HEADING_FOR = {
     goal = { name = "Key holder", rating = "Gain" },
     board = { sync = "Time", name = "Holder", rating = "Signed up" },
+    raids = { sync = "Time", name = "Raid", dungeon = "Signed up as", rating = "Signed up" },
 }
 
 local M, factor = { COLW = {} }, nil
@@ -63,11 +66,13 @@ local function chromeHeight()
 end
 
 local function minSize()
-    local fixed, count = 0, 0
-    for _, width in pairs(M.COLW) do
-        fixed, count = fixed + width, count + 1
+    local widest = 0
+    for _, name in ipairs(TABS) do
+        local cols, fixed = Window.Columns(name), 0
+        for _, col in ipairs(cols) do fixed = fixed + M.COLW[col] end
+        widest = math.max(widest, fixed + M.GAP * (#cols - 1))
     end
-    return M.COL_L + M.COL_R + fixed + M.GAP * (count - 1), chromeHeight() + MIN_ROWS * M.ROW_H
+    return M.COL_L + M.COL_R + widest, chromeHeight() + MIN_ROWS * M.ROW_H
 end
 
 local function stored()
@@ -102,7 +107,7 @@ local function byRating(a, b)
     return (a.rating or 0) > (b.rating or 0)
 end
 
-function Window.MainGuid(guid)
+local function mainGuidFor(guid)
     local main = T.DB:Settings().main
     if main and T.DB:Data().chars[main] then return main end
     return guid or T.Plain(UnitGUID("player"))
@@ -117,7 +122,7 @@ function Window.View()
     local db = T.DB:Data()
     local guid = T.Plain(UnitGUID("player"))
     local player = T.Plain(UnitName("player"))
-    local mainGuid = Window.MainGuid(guid)
+    local mainGuid = mainGuidFor(guid)
     local view = { chars = {}, party = T.Exchange:PartyKeys(), guild = T.Exchange:GuildView() }
 
     for charGuid, char in pairs(db.chars) do
@@ -165,6 +170,7 @@ function Window.View()
         view.goals = Window.Goals(view, view.goalRating, bests, T.Rating.LevelCap(own.best))
     end
     view.board = T.Board:View()
+    view.raids = T.Raids:View()
     return view
 end
 
@@ -212,7 +218,7 @@ function Window.Goals(view, rating, bests, cap, names)
     return entries
 end
 
-function Window.BoardEntries(posts)
+local function boardEntries(posts)
     local count = {}
     for _, post in ipairs(posts or {}) do
         local day = T.BoardPane.DayKey(post.at)
@@ -238,12 +244,39 @@ function Window.BoardEntries(posts)
     return entries
 end
 
+local function raidEntries(raids)
+    local count = {}
+    for _, raid in ipairs(raids or {}) do
+        local day = T.BoardPane.DayKey(raid.at)
+        count[day] = (count[day] or 0) + 1
+    end
+    local entries, current = {}, nil
+    for _, raid in ipairs(raids or {}) do
+        local day = T.BoardPane.DayKey(raid.at)
+        if day ~= current then
+            current = day
+            entries[#entries + 1] = { group = true, title = T.BoardPane.DayText(raid.at),
+                note = count[day] == 1 and L["1 raid"] or L["%d raids"]:format(count[day]) }
+        end
+        entries[#entries + 1] = {
+            raid = true, key = raid.key, name = raid.title, difficulty = raid.difficultyName,
+            tall = true, instanceName = raid.instanceName, killed = raid.killed, bosses = raid.bosses,
+            dungeon = raid.mine and (raid.mine.role and T.RaidPane.RoleName(raid.mine.role) or L["no role yet"]) or "-",
+            syncText = T.BoardPane.TimeText(raid.at),
+            rating = #raid.signups, ratingText = tostring(#raid.signups),
+            own = raid.mine ~= nil,
+        }
+    end
+    return entries
+end
+
 function Window.Rows(view, tab)
     local rows
     if tab == "chars" then rows = view.chars
     elseif tab == "party" then rows = view.party
     elseif tab == "goal" then rows = view.goals or {}
-    elseif tab == "board" then rows = Window.BoardEntries(view.board)
+    elseif tab == "board" then rows = boardEntries(view.board)
+    elseif tab == "raids" then rows = raidEntries(view.raids)
     else rows = view.guild and view.guild.keys or {} end
     return rows, view.sample == true
 end
@@ -253,9 +286,10 @@ function Window.Grouped(tab, sort)
     return tab == "guild" and sort.col == "dungeon"
 end
 
-function Window.Columns(tab, grouped)
+function Window.Columns(tab)
     if tab == "goal" then return { "dungeon", "key", "name", "rating" } end
     if tab == "board" then return { "sync", "name", "dungeon", "key", "rating" } end
+    if tab == "raids" then return { "sync", "name", "difficulty", "dungeon", "rating" } end
     local cols = { "name", "dungeon" }
     cols[#cols + 1] = "key"
     if tab == "chars" then
@@ -384,6 +418,15 @@ function Window.EmptyState(view, tab)
             form = true,
         }
     end
+    if tab == "raids" then
+        if not view.raids then
+            return { title = L["not in a guild"], hint = L["The raid calendar shows the raids of your guild's calendar."] }
+        end
+        return {
+            title = L["No raids in the guild calendar"],
+            hint = L["Raids your guild enters in the game's calendar for the next two weeks stand here, and you sign up for them as tank, healer or damage dealer."],
+        }
+    end
     return {
         title = view.guild and L["No keys yet this week"] or L["not in a guild"],
         hint = L["Guild keys come through the LibKeystone protocol, as with BigWigs."],
@@ -413,6 +456,10 @@ function Window.FooterLeft(view, which)
     if which == "board" then
         if not view.board then return L["not in a guild"] end
         return #view.board == 1 and L["1 key on the board"] or L["%d keys on the board"]:format(#view.board)
+    end
+    if which == "raids" then
+        if not view.raids then return L["not in a guild"] end
+        return #view.raids == 1 and L["1 raid in the calendar"] or L["%d raids in the calendar"]:format(#view.raids)
     end
     if not view.guild then return L["not in a guild"] end
     local keys = #(view.guild.keys or {})
@@ -504,6 +551,14 @@ for _, name in ipairs(TABS) do sorts[name] = defaultSort(name) end
 
 local leaving = false
 
+local ticker
+
+local function closed()
+    if ticker then ticker:Cancel() ticker = nil end
+    hovered = nil
+    if preview and T.Preview then T.Preview:Stop() end
+end
+
 Window.FONTS = T.Fonts.List
 Window.DEFAULT_FONT = "marcellus"
 
@@ -542,6 +597,11 @@ Window.Text = text
 Window.Fill = fill
 Window.Tint = tint
 Window.ClassColor = classColor
+Window.MapName = mapName
+
+function Window.SetHint(value)
+    if footer then footer.hint:SetText(value or "") end
+end
 
 function Window.Metrics()
     local f = metrics()
@@ -741,6 +801,8 @@ local function createTabs()
             sorts[name] = defaultSort(name)
             T.DB:Settings().window.tab = name
             T.BoardPane:Close()
+            T.RaidPane:Close()
+            if name == "raids" then T.Raids:Load(true) end
             Window:Refresh()
         end)
         tabButtons[name] = button
@@ -784,14 +846,16 @@ local function createHeadings()
     sortArrow:Hide()
 end
 
+local rowLift = 0
+
 local function column(region, pos, name, justify)
     local box = pos[name]
     if not box then region:Hide() return nil end
     region:ClearAllPoints()
     if justify == "RIGHT" then
-        region:SetPoint("RIGHT", box.x + box.w - dims.w + 1, 0)
+        region:SetPoint("RIGHT", box.x + box.w - dims.w + 1, rowLift)
     else
-        region:SetPoint("LEFT", box.x - 1, 0)
+        region:SetPoint("LEFT", box.x - 1, rowLift)
     end
     if region.SetWidth then region:SetWidth(box.w) end
     region:Show()
@@ -844,6 +908,11 @@ local function createEntry()
     entry.rating = text(entry, 13, C.text, "RIGHT")
     entry.sync = text(entry, 11, C.faint)
     entry.ilvl = text(entry, 11, C.muted, "RIGHT")
+    entry.difficulty = text(entry, 13, C.body)
+    entry.difficulty:SetWordWrap(false)
+    entry.instance = text(entry, 11, C.muted)
+    entry.instance:SetWordWrap(false)
+    entry.bosses = {}
 
     entry.dots = {}
     for i = 1, DOTS do entry.dots[i] = entry:CreateTexture(nil, "ARTWORK") end
@@ -861,7 +930,7 @@ local function createEntry()
         if not row then return end
         hovered = entry
         entry.hover:Show()
-        footer.hint:SetText(row.board and L["Click: details and sign-up"]
+        footer.hint:SetText((row.board or row.raid) and L["Click: details and sign-up"]
             or (row.guid and not row.main and not entry.sample) and L["Click: make this your main"] or "")
     end)
     entry:SetScript("OnLeave", function()
@@ -874,6 +943,8 @@ local function createEntry()
         if not row or entry.sample then return end
         if row.board then
             if button == "LeftButton" then T.BoardPane:Open(row.id) end
+        elseif row.raid then
+            if button == "LeftButton" then T.RaidPane:Open(row.key) end
         elseif button == "LeftButton" and row.guid and not row.main then
             askMain(row)
         elseif button == "RightButton" and not row.plan then
@@ -889,8 +960,11 @@ local function hideRow(entry)
     entry.rating:Hide()
     entry.sync:Hide()
     entry.ilvl:Hide()
+    entry.difficulty:Hide()
+    entry.instance:Hide()
     for _, dot in ipairs(entry.dots) do dot:Hide() end
     for _, slot in ipairs(entry.slots) do slot:Hide() end
+    for _, square in ipairs(entry.bosses) do square:Hide() end
 end
 
 local function drawGroup(entry, group)
@@ -920,7 +994,8 @@ local function drawGroup(entry, group)
 end
 
 local function drawRow(entry, row, pos, sample)
-    entry:SetHeight(M.ROW_H)
+    entry:SetHeight(row.tall and M.TALL_H or M.ROW_H)
+    rowLift = row.tall and round((M.TALL_H - M.ROW_H) / 2) or 0
     entry.row, entry.sample = row, sample
     entry.line:Show()
     entry.groupName:Hide()
@@ -999,6 +1074,42 @@ local function drawRow(entry, row, pos, sample)
         entry.rating:SetText(row.ratingText or (row.rating and math.floor(row.rating + 0.5)) or "-")
     end
 
+    if column(entry.difficulty, pos, "difficulty") then
+        entry.difficulty:SetText(row.difficulty or "-")
+    end
+
+    local nameBox = pos.name
+    local bossCount = row.tall and nameBox and row.bosses or 0
+    if row.tall and nameBox and row.instanceName then
+        entry.instance:ClearAllPoints()
+        entry.instance:SetPoint("LEFT", nameBox.x - 1, round(M.TALL_H / 2) - M.NAME_Y)
+        entry.instance:SetWidth(nameBox.w)
+        entry.instance:SetText(row.instanceName)
+        entry.instance:Show()
+    else
+        entry.instance:Hide()
+    end
+    for i = 1, math.max(bossCount, #entry.bosses) do
+        local square = entry.bosses[i]
+        if i <= bossCount then
+            if not square then
+                square = entry:CreateTexture(nil, "ARTWORK")
+                entry.bosses[i] = square
+            end
+            square:SetSize(M.DOT, M.DOT)
+            square:ClearAllPoints()
+            square:SetPoint("LEFT", nameBox.x - 1 + (i - 1) * (M.DOT + M.DOT_GAP), round(M.TALL_H / 2) - M.BOSS_Y)
+            if i <= (row.killed or 0) then
+                square:SetColorTexture(C.glow[1], C.glow[2], C.glow[3], 1)
+            else
+                square:SetColorTexture(C.muted[1], C.muted[2], C.muted[3], 0.30)
+            end
+            square:Show()
+        elseif square then
+            square:Hide()
+        end
+    end
+
     entry:SetAlpha(sample and 0.55 or 1)
 end
 
@@ -1027,6 +1138,7 @@ local function createList()
     empty:Hide()
 
     T.BoardPane:Create(frame, list)
+    T.RaidPane:Create(frame, list)
 end
 
 local function createFooter()
@@ -1037,23 +1149,36 @@ local function createFooter()
     footer.hint = text(frame, 11, C.faint)
     footer.hint:SetPoint("LEFT", footer.left, "RIGHT", 12, 0)
     footer.right = text(frame, 12, C.gold, "RIGHT")
+    footer.hint:SetPoint("RIGHT", footer.right, "LEFT", -12, 0)
+    footer.hint:SetWordWrap(false)
+end
+
+local function entryHeight(item)
+    return item.group and M.GROUP_H or item.tall and M.TALL_H or M.ROW_H
 end
 
 local function maxOffset(entries)
     local used = 0
     for i = #entries, 1, -1 do
-        used = used + (entries[i].group and M.GROUP_H or M.ROW_H)
+        used = used + entryHeight(entries[i])
         if used > R.listH then return i end
     end
     return 0
 end
 
-local function visibleRows()
-    return math.max(1, math.floor(R.listH / M.ROW_H))
+local function pageSize(entries, first, step)
+    local used, count, index = 0, 0, first
+    while entries[index] do
+        used = used + entryHeight(entries[index])
+        if used > R.listH then break end
+        count, index = count + 1, index + step
+    end
+    return math.max(1, count)
 end
 
 local scrollBar, thumb
 local maxScroll, scrollRoom = 0, 0
+local scrollEntries = {}
 
 local function scrollTo(value)
     value = math.max(0, math.min(maxScroll, value))
@@ -1077,9 +1202,9 @@ local function createScrollBar()
         if button ~= "LeftButton" then return end
         local y, top, bottom = cursorY(scrollBar), thumb:GetTop(), thumb:GetBottom()
         if top and y > top then
-            scrollTo(offset - visibleRows())
+            scrollTo(offset - pageSize(scrollEntries, offset, -1))
         elseif bottom and y < bottom then
-            scrollTo(offset + visibleRows())
+            scrollTo(offset + pageSize(scrollEntries, offset + 1, 1))
         end
     end)
 
@@ -1112,6 +1237,7 @@ local function createScrollBar()
 end
 
 local function drawScrollBar(entries)
+    scrollEntries = entries
     maxScroll = maxOffset(entries)
     if maxScroll == 0 then
         scrollRoom = 0
@@ -1119,7 +1245,7 @@ local function drawScrollBar(entries)
         return
     end
     local total = 0
-    for _, item in ipairs(entries) do total = total + (item.group and M.GROUP_H or M.ROW_H) end
+    for _, item in ipairs(entries) do total = total + entryHeight(item) end
     local track = R.listH - 4
     local height = math.max(M.THUMB_MIN, math.floor(track * R.listH / total))
     scrollRoom = track - height
@@ -1260,7 +1386,9 @@ local function create()
     end)
 
     frame:SetScript("OnHide", function()
-        if not leaving then T.DB:Settings().window.open = false end
+        if leaving then return end
+        T.DB:Settings().window.open = false
+        closed()
     end)
     local kept = T.DB:Settings().window.tab
     for _, name in ipairs(TABS) do
@@ -1293,12 +1421,13 @@ local function tabLabel(name)
     if name == "party" then return L["Group"] end
     if name == "goal" then return L["Rating goals"] end
     if name == "board" then return L["Board"] end
+    if name == "raids" then return L["Raids"] end
     return L["Guild"]
 end
 
 local HEADING = {
     name = "Character", dungeon = "Dungeon", key = "Key",
-    week = "Week", vault = "Vault", sync = "Updated", rating = "Rating",
+    week = "Week", vault = "Vault", sync = "Updated", rating = "Rating", difficulty = "Difficulty",
 }
 
 Window.TABS = TABS
@@ -1362,7 +1491,7 @@ local function drawEntries(entries, pos, sample)
         local item = entries[index]
         if item.group then drawGroup(entry, item) else drawRow(entry, item, pos, sample) end
         entry:Show()
-        used = used + (item.group and M.GROUP_H or M.ROW_H)
+        used = used + entryHeight(item)
     end
     for i = shown + 1, #entryFrames do
         entryFrames[i].row = nil
@@ -1410,14 +1539,18 @@ function Window:Refresh()
     info.affixes:SetText(Window.AffixText(view))
     info.reset:SetText(Window.ResetText())
 
-    local pos = Window.Layout(Window.Columns(tab, Window.Grouped(tab, sort)), dims.w)
+    local pos = Window.Layout(Window.Columns(tab), dims.w)
     R.postButton:SetShown(tab == "board" and not sample and view.board ~= nil)
 
-    local paneOpen = T.BoardPane:IsOpen()
-    if paneOpen and (tab ~= "board" or sample) then
+    if T.BoardPane:IsOpen() and (tab ~= "board" or sample) then
         T.BoardPane:Close()
         return
     end
+    if T.RaidPane:IsOpen() and (tab ~= "raids" or sample) then
+        T.RaidPane:Close()
+        return
+    end
+    local paneOpen = T.BoardPane:IsOpen() or T.RaidPane:IsOpen()
 
     offset = math.max(0, math.min(offset, maxOffset(entries)))
     if paneOpen then
@@ -1429,6 +1562,7 @@ function Window:Refresh()
         scrollBar:Hide()
         empty:Hide()
         T.BoardPane:Refresh()
+        T.RaidPane:Refresh(view.raids)
     elseif Window.IsEmpty(view, tab, entries) then
         drawHeadings(pos, sort, tab)
         hovered = nil
@@ -1462,8 +1596,6 @@ function Window:Restyle()
     applySize()
 end
 
-local ticker
-
 function Window:Open(which)
     if not frame then create() end
     if which then tab, offset = which, 0 end
@@ -1473,15 +1605,14 @@ function Window:Open(which)
     self:Refresh()
     T.Exchange:RefreshParty()
     T.Exchange:RefreshGuild()
+    T.Raids:Load(tab == "raids")
     if not ticker then ticker = C_Timer.NewTicker(5, function() Window:Refresh() end) end
 end
 
 function Window:Close()
     T.DB:Settings().window.open = false
     if frame then frame:Hide() end
-    if ticker then ticker:Cancel() ticker = nil end
-    hovered = nil
-    if preview and T.Preview then T.Preview:Stop() end
+    closed()
 end
 
 function Window:KeepSize()

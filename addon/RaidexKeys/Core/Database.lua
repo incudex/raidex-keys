@@ -10,11 +10,12 @@ local defaults = {
     timer = { best = {} },
     roster = {},
     board = {},
+    raids = {},
     settings = {
         shareWithGuild = true,
         theme = "raidex",
         introSeen = false,
-        grid = 10,
+        grid = T.GRID_DEFAULT,
         minimap = { hide = false, angle = 225 },
         timer = {
             enabled = true, hideBlizzard = true, hideQuests = false,
@@ -46,7 +47,6 @@ function DB:Initialize()
     if type(RaidexKeysDB) ~= "table" then RaidexKeysDB = {} end
     local db = RaidexKeysDB
     fill(db, defaults)
-    db.settings.language = nil
     db.schema = SCHEMA
     self.db = db
 end

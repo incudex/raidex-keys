@@ -31,14 +31,14 @@ end
 local RETRY_EVERY, RETRY_MAX = 5, 12
 local retries = 0
 
-function Snapshot:RetryLater()
+local function retryLater()
     if retries >= RETRY_MAX then return end
     retries = retries + 1
     C_MythicPlus.RequestMapInfo()
-    C_Timer.After(RETRY_EVERY, function() self:Schedule() end)
+    C_Timer.After(RETRY_EVERY, function() Snapshot:Schedule() end)
 end
 
-function Snapshot.Consistent(rating, best)
+local function consistent(rating, best)
     return not (rating and rating > 0) or next(best) ~= nil
 end
 
@@ -138,7 +138,7 @@ local function bestRuns(db)
             best[mapId] = {
                 level = level,
                 durationSec = math.floor((Plain(run.bestRunDurationMS) or 0) / 1000 + 0.5),
-                overTime = not run.finishedSuccess,
+                overTime = not Plain(run.finishedSuccess),
                 score = Plain(run.mapScore),
             }
         end
@@ -166,7 +166,7 @@ local function bestRuns(db)
         if scores and not best[mapId] then
             local top
             for _, entry in ipairs(scores) do
-                if not top or (entry.score or 0) > (top.score or 0) then top = entry end
+                if not top or (Plain(entry.score) or 0) > (Plain(top.score) or 0) then top = entry end
             end
             if top then
                 best[mapId] = {
@@ -236,14 +236,14 @@ function Snapshot:Take()
     local newSeason = char.season ~= db.season
     local rating = self:Rating()
     local best = next(db.maps) and bestRuns(db) or {}
-    if Snapshot.Consistent(rating, best) then
+    if consistent(rating, best) then
         retries = 0
         if rating > 0 or newSeason or not char.rating then char.rating = rating end
         if next(best) or newSeason or not char.best then char.best = best end
         char.season = db.season
     else
         if not char.rating then char.rating = rating end
-        self:RetryLater()
+        retryLater()
     end
     char.vault = vault()
     char.week = weekRuns()

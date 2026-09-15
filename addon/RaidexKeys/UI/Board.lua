@@ -5,14 +5,13 @@ local BoardPane = {}
 T.BoardPane = BoardPane
 
 local STEP_MINUTES = 15
-local DAYS_AHEAD = 13
 local ROLE_NAMES = { T = "TANK", H = "HEALER", D = "DAMAGER" }
 local ROLE_FALLBACK = { T = "Tank", H = "Healer", D = "Damage" }
 local WEEKDAYS = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" }
 
 local pane
 local mode, postId
-local form = { day = 0, minutes = 19 * 60, note = "" }
+local form = { day = 0, minutes = 19 * 60 }
 local W, C
 
 local function epochDays(year, month, day)
@@ -22,6 +21,7 @@ local function epochDays(year, month, day)
     local doy = math.floor((153 * ((month + 9) % 12) + 2) / 5) + day - 1
     return era * 146097 + yoe * 365 + math.floor(yoe / 4) - math.floor(yoe / 100) + doy - 719468
 end
+BoardPane.EpochDays = epochDays
 
 local function quarter(seconds)
     return math.floor(seconds / 900 + 0.5) * 900
@@ -94,9 +94,16 @@ local function realmToday()
     return shown - shown % 86400
 end
 
-function BoardPane.FormTime(day, minutes)
-    local wall = realmToday() + (day or 0) * 86400 + (minutes or 0) * 60
+local function fromRealm(wall)
     return wall - BoardPane.RealmOffset(wall - BoardPane.RealmOffset())
+end
+
+function BoardPane.FormTime(day, minutes)
+    return fromRealm(realmToday() + (day or 0) * 86400 + (minutes or 0) * 60)
+end
+
+function BoardPane.WallTime(year, month, day, minutes)
+    return fromRealm(epochDays(year, month, day) * 86400 + (minutes or 0) * 60)
 end
 
 local function formDefaults()
@@ -104,13 +111,13 @@ local function formDefaults()
     minutes = math.ceil(minutes / STEP_MINUTES) * STEP_MINUTES
     form.day = math.floor(minutes / (24 * 60))
     form.minutes = minutes % (24 * 60)
-    form.note = ""
 end
 
 local function whisper(name)
     local tell = (ChatFrameUtil and ChatFrameUtil.SendTell) or ChatFrame_SendTell
     if tell and name then tell(name) end
 end
+BoardPane.Whisper = whisper
 
 local function hex(color)
     return ("|cff%02x%02x%02x"):format(math.floor(color[1] * 255 + 0.5),
@@ -132,6 +139,8 @@ function BoardPane:Create(frame, list)
     pane:SetFrameLevel(frame:GetFrameLevel() + 3)
     pane:SetAllPoints(list)
     pane:EnableMouse(true)
+    pane:EnableMouseWheel(true)
+    pane:SetScript("OnMouseWheel", function() end)
     local background = W.Fill(pane, C.bg, 1)
     background:SetAllPoints()
 
@@ -170,7 +179,7 @@ function BoardPane:Create(frame, list)
 
     pane.dayLabel = W.Text(pane, 12, C.text, "CENTER")
     pane.dayPrev = button("<", function() form.day = math.max(0, form.day - 1) BoardPane:Refresh() end)
-    pane.dayNext = button(">", function() form.day = math.min(DAYS_AHEAD, form.day + 1) BoardPane:Refresh() end)
+    pane.dayNext = button(">", function() form.day = math.min(T.Raids.DAYS_AHEAD, form.day + 1) BoardPane:Refresh() end)
     pane.timeLabel = W.Text(pane, 12, C.text, "CENTER")
     pane.timePrev = button("<", function()
         form.minutes = (form.minutes - STEP_MINUTES) % (24 * 60)
@@ -273,11 +282,6 @@ local function showParts(parts, on)
     for _, name in ipairs(parts) do pane[name]:SetShown(on) end
 end
 
-local function mapName(mapId)
-    local map = mapId and T.DB:Data().maps[mapId]
-    return map and map.name or (mapId and C_ChallengeMode.GetMapUIInfo(mapId)) or "?"
-end
-
 local KEY_COLOR = "|cffa78bff"
 
 local function drawPost()
@@ -287,7 +291,7 @@ local function drawPost()
         return
     end
     showParts(FORM_PARTS, false)
-    pane.title:SetText(("%s+%d|r %s"):format(KEY_COLOR, post.level or 0, mapName(post.mapId)))
+    pane.title:SetText(("%s+%d|r %s"):format(KEY_COLOR, post.level or 0, W.MapName(post.mapId) or "?"))
     pane.sub:SetText(("%s · %s · %s"):format(BoardPane.DayText(post.at), BoardPane.TimeText(post.at), L["Key holder:"]))
     pane.holderName = post.holder
     pane.holder:SetLabel(named(post.name, post.classFile))
@@ -334,7 +338,7 @@ local function drawForm()
     showParts(FORM_PARTS, true)
 
     local mapId, level = T.Snapshot:OwnKey()
-    pane.title:SetText(mapId and ("%s+%d|r %s"):format(KEY_COLOR, level, mapName(mapId)) or L["No keystone in your bags."])
+    pane.title:SetText(mapId and ("%s+%d|r %s"):format(KEY_COLOR, level, W.MapName(mapId) or "?") or L["No keystone in your bags."])
     pane.sub:SetText(T.Board:OwnPost() and L["Posting it replaces your earlier posting."] or L["Pin your key for a day and a time."])
     pane.dayLabel:SetText(BoardPane.DayText(BoardPane.FormTime(form.day, 0)))
     pane.timeLabel:SetText(BoardPane.ClockText(form.minutes))

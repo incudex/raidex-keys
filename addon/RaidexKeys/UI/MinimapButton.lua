@@ -74,7 +74,7 @@ function MinimapButton.OnClick(_, mouseButton)
     elseif IsShiftKeyDown and IsShiftKeyDown() then
         T.OpenOptions()
     elseif IsControlKeyDown and IsControlKeyDown() then
-        T.Timer:SetShown(not T.DB:Settings().timer.enabled)
+        T.Timer:SetShown(not T.Timer.Wanted(), true)
     else
         T.Window:Toggle()
     end

@@ -68,7 +68,7 @@ end
 local dragDriver = CreateFrame("Frame")
 
 function T.BeginDrag(frame)
-    local step = T.DB:Settings().grid or T.GRID_DEFAULT
+    local step = T.DB:Settings().grid
     local left, top = frame:GetLeft(), frame:GetTop()
     if step <= 0 or not (left and top) then
         frame:StartMoving()
@@ -116,7 +116,7 @@ BINDING_NAME_RAIDEXKEYS_TIMER = L["Show or hide the Mythic+ timer"]
 BINDING_NAME_RAIDEXKEYS_WINDOW = L["Open the Raidex Keys window"]
 
 function RaidexKeys_ToggleTimer()
-    T.Timer:SetShown(not T.DB:Settings().timer.enabled)
+    T.Timer:SetShown(not T.Timer.Wanted(), true)
 end
 
 function RaidexKeys_ToggleWindow()
@@ -215,11 +215,16 @@ function Addon:PrintDebug()
     local history = C_MythicPlus.GetRunHistory and C_MythicPlus.GetRunHistory(true, true)
     show("run history (all weeks)", history and #history)
 
+    show("guild raids in the calendar (count, first key)", T.Raids:DebugInfo())
+    local firstRaid = (T.Raids:View() or {})[1]
+    show("first raid (instance, guild progress)", firstRaid and firstRaid.instance,
+        firstRaid and firstRaid.bosses and (firstRaid.killed .. "/" .. firstRaid.bosses))
+
     local guid = T.Plain(UnitGUID("player"))
-    local stored = guid and T.DB:Data().chars[guid]
+    local char = guid and T.DB:Data().chars[guid]
     local count = 0
-    for _ in pairs(stored and stored.best or {}) do count = count + 1 end
-    local rating = stored and stored.rating or 0
+    for _ in pairs(char and char.best or {}) do count = count + 1 end
+    local rating = char and char.rating or 0
     self:Print(("debug check rating > 0 needs runs: stored rating %s, stored runs %d -> %s"):format(
         tostring(rating), count, (rating == 0 or count > 0) and "OK" or "NOT MET (game data not loaded yet)"))
 end
@@ -237,6 +242,7 @@ loader:SetScript("OnEvent", function(self, event, name)
         T.Snapshot:Start()
         T.Exchange:Start()
         T.Board:Start()
+        T.Raids:Start()
         T.MinimapButton:Start()
         T.Timer:Start()
         T.Window:Start()

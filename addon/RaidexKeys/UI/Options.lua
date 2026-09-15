@@ -122,10 +122,10 @@ local function element(template, data, height)
     layout:AddInitializer(initializer)
 end
 
-local function slider(key, name, tooltip, low, high, step, get, set, format, after)
+local function slider(key, name, tooltip, low, high, step, default, get, set, format, after)
     if not (Settings.CreateSlider and Settings.CreateSliderOptions) then return end
     local setting = Settings.RegisterProxySetting(category, ADDON .. "_" .. key,
-        Settings.VarType.Number, name, get(), get, function(value)
+        Settings.VarType.Number, name, default, get, function(value)
             set(value)
             if after then after() else T.Timer:Restyle() end
         end)
@@ -144,10 +144,10 @@ local function checkbox(key, variable, table, name, default, tooltip, changed)
     return setting
 end
 
-local function toggle(key, name, tooltip, get, set)
+local function toggle(key, name, tooltip, default, get, set)
     if not (Settings.RegisterProxySetting and Settings.CreateCheckbox) then return end
     local setting = Settings.RegisterProxySetting(category, ADDON .. "_" .. key,
-        Settings.VarType.Boolean, name, true, get, function(value)
+        Settings.VarType.Boolean, name, default, get, function(value)
             set(value)
             T.Timer:Restyle()
         end)
@@ -184,7 +184,7 @@ local function addGeneral(settings)
 
     slider("grid", L["Grid when moving"],
         L["The window and the timer move in steps of this many points while you drag them, so they line up. Off moves them freely."],
-        0, T.GRID_MAX, 10,
+        0, T.GRID_MAX, 10, T.GRID_DEFAULT,
         function() return settings.grid or T.GRID_DEFAULT end,
         function(value) settings.grid = value end,
         function(value) return value == 0 and L["off"] or tostring(value) end,
@@ -212,7 +212,7 @@ local function addWindow(settings)
 
     slider("windowFontSize", L["Window font size"],
         L["The size of the window's text. Rows, columns and the window itself grow and shrink with it; its lower right corner drags it bigger or smaller."],
-        T.Window.SIZE_MIN, T.Window.SIZE_MAX, 1,
+        T.Window.SIZE_MIN, T.Window.SIZE_MAX, 1, T.Window.DEFAULT_SIZE,
         function() return window.fontSize or T.Window.DEFAULT_SIZE end,
         function(value) window.fontSize = value end,
         function(value) return tostring(value) end,
@@ -234,13 +234,13 @@ local function addWindow(settings)
         end, tooltip)
     end
     formatChoice("timeFormat", L["Time format"],
-        L["How the key board writes a posting's time. \"As the game's clock\" follows the 24-hour setting of the game's own clock."], {
+        L["How the key board and the raid calendar write a time. \"As the game's clock\" follows the 24-hour setting of the game's own clock."], {
             { "auto", L["As the game's clock"] },
             { "24", L["24 hours (22:15)"] },
             { "12", L["12 hours (10:15 PM)"] },
         })
     formatChoice("dateFormat", L["Date format"],
-        L["How the key board writes a posting's day. \"As the game's language\" writes it the way the language of your game does."], {
+        L["How the key board and the raid calendar write a day. \"As the game's language\" writes it the way the language of your game does."], {
             { "auto", L["As the game's language"] },
             { "dmy", L["Day.Month. (13.09.)"] },
             { "mdy", L["Month/Day (09/13)"] },
@@ -252,7 +252,10 @@ local function addTimer(timer)
     section(L["During a key"])
     timerToggle = checkbox("timer", "enabled", timer, L["Show Mythic+ timer"], true,
         L["While a keystone runs: time left, the +2 and +3 limits, bosses, enemy forces and deaths. It stands there for as long as these options are open, to drag into place."],
-        function() T.Timer:Update() end)
+        function()
+            T.DB:Settings().timer.hidden = nil
+            T.Timer:Update()
+        end)
     checkbox("timerHideBlizzard", "hideBlizzard", timer, L["Hide the game's own timer"], true,
         L["Only while the Raidex Keys timer shows a run."],
         function() T.Timer:Update() end)
@@ -261,10 +264,10 @@ local function addTimer(timer)
         function() T.Timer:Update() end)
 
     section(L["In the chat"])
-    checkbox("timerAnnounce", "announce", timer, L["The key's start and end in the chat"], true,
-        L["When the timer starts you read the key and the time it has - during a key the game keeps addons out of the group chat. At the end the key's holder tells the group how it went, once the game lets addons speak again."])
+    checkbox("timerAnnounce", "announce", timer, L["The run's end in the group chat"], true,
+        L["At the end the key's holder tells the group how it went, once the game lets addons speak again. Only while the Mythic+ timer is shown."])
     checkbox("timerBossTimes", "bossTimes", timer, L["Boss times in your chat"], true,
-        L["After every boss, for you alone: when it fell, and where your M+ rating would land."])
+        L["After every boss, for you alone: when it fell, and where your M+ rating would land. Only while the Mythic+ timer is shown."])
 
     section(L["Preview"])
     if Settings.CreateDropdown then
@@ -284,61 +287,69 @@ local function addTimer(timer)
     end
     slider("previewLevel", L["Level in the preview"],
         L["The keystone level of a dungeon picked above. Your own key keeps its own level."],
-        2, 20, 1,
+        2, 20, 1, T.Timer.DEFAULT_PREVIEW_LEVEL,
         function() return T.Timer.PreviewChoice().level end,
         function(value) T.Timer:SetPreviewChoice(nil, value) end,
         function(value) return "+" .. value end)
 
     section(L["Look"])
+    local Timer = T.Timer
+    local function percent(value) return math.floor(value * 100 + 0.5) end
+
     toggle("timerAffixes", L["Show the affixes"],
-        L["The week's affixes under the dungeon's name, two to a line."],
+        L["The week's affixes under the dungeon's name, running on across the card's width."],
+        Timer.DEFAULT_AFFIXES,
         function() return timer.showAffixes ~= false end,
         function(value) timer.showAffixes = value end)
 
     toggle("timerScore", L["Show what the run is worth"],
         L["The line at the foot: the rating the run would give if it ended this moment, and what that would add."],
+        Timer.DEFAULT_SCORE,
         function() return timer.showScore ~= false end,
         function(value) timer.showScore = value end)
 
     slider("timerBosses", L["Bosses in the list"],
         L["How many bosses the timer lists at once. The list follows the run: it begins at the first boss still standing, so what is next is always on it."],
-        T.Timer.BOSSES_MIN, T.Timer.BOSSES_MAX, 1,
-        function() return timer.maxBosses or T.Timer.BOSSES_MAX end,
+        Timer.BOSSES_MIN, Timer.BOSSES_MAX, 1, Timer.DEFAULT_BOSSES,
+        function() return timer.maxBosses or Timer.DEFAULT_BOSSES end,
         function(value) timer.maxBosses = value end,
-        function(value) return value >= T.Timer.BOSSES_MAX and L["all"] or tostring(value) end)
+        function(value) return value >= Timer.BOSSES_MAX and L["all"] or tostring(value) end)
 
     slider("timerAlpha", L["Timer opacity"],
         L["How much of the dungeon shows through the timer's background."],
-        math.floor(T.Timer.ALPHA_MIN * 100), math.floor(T.Timer.ALPHA_MAX * 100), 5,
-        function() return math.floor((timer.alpha or 0.75) * 100 + 0.5) end,
+        math.floor(Timer.ALPHA_MIN * 100), math.floor(Timer.ALPHA_MAX * 100), 5,
+        percent(Timer.DEFAULT_ALPHA),
+        function() return percent(timer.alpha or Timer.DEFAULT_ALPHA) end,
         function(value) timer.alpha = value / 100 end,
         function(value) return ("%d %%"):format(value) end)
 
     slider("timerFontSize", L["Timer font size"],
         L["The size of the body text. Head, clock and the small lines follow it."],
-        T.Timer.SIZE_MIN, T.Timer.SIZE_MAX, 1,
-        function() return timer.fontSize or 11 end,
+        Timer.SIZE_MIN, Timer.SIZE_MAX, 1, Timer.DEFAULT_SIZE,
+        function() return timer.fontSize or Timer.DEFAULT_SIZE end,
         function(value) timer.fontSize = value end,
         function(value) return tostring(value) end)
 
     slider("timerScale", L["Timer size"],
         L["The whole card, larger or smaller. The font size sets the text inside it; this sets how big the card itself is drawn."],
-        math.floor(T.Timer.SCALE_MIN * 100), math.floor(T.Timer.SCALE_MAX * 100), 5,
-        function() return math.floor((timer.scale or 0.9) * 100 + 0.5) end,
+        math.floor(Timer.SCALE_MIN * 100), math.floor(Timer.SCALE_MAX * 100), 5,
+        percent(Timer.DEFAULT_SCALE),
+        function() return percent(timer.scale or Timer.DEFAULT_SCALE) end,
         function(value) timer.scale = value / 100 end,
         function(value) return ("%d %%"):format(value) end)
 
     slider("timerSpacing", L["Timer line spacing"],
         L["How far the timer's lines stand apart. Below 100 % the card is tighter than the design draws it."],
-        math.floor(T.Timer.SPACING_MIN * 100), math.floor(T.Timer.SPACING_MAX * 100), 5,
-        function() return math.floor((timer.spacing or 0.75) * 100 + 0.5) end,
+        math.floor(Timer.SPACING_MIN * 100), math.floor(Timer.SPACING_MAX * 100), 5,
+        percent(Timer.DEFAULT_SPACING),
+        function() return percent(timer.spacing or Timer.DEFAULT_SPACING) end,
         function(value) timer.spacing = value / 100 end,
         function(value) return ("%d %%"):format(value) end)
 
     if Settings.CreateDropdown then
         local setting = Settings.RegisterProxySetting(category, ADDON .. "_timerFont",
-            Settings.VarType.String, L["Timer font"], "frizqt",
-            function() return timer.font or "frizqt" end,
+            Settings.VarType.String, L["Timer font"], Timer.DEFAULT_FONT,
+            function() return timer.font or Timer.DEFAULT_FONT end,
             function(value)
                 timer.font = value
                 T.Timer:Restyle()

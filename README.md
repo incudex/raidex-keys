@@ -25,8 +25,8 @@
 
 A World of Warcraft addon for Mythic+: the keystones, ratings, best runs and
 Great Vault of all your characters, your group's and your guild's keys, the
-runs to your next rating goal, your guild's key board and a Mythic+ timer -
-all in game. Part of the [Raidex](https://raidex.app) family.
+runs to your next rating goal, your guild's key board, a raid calendar with
+sign-ups and a Mythic+ timer - all in game. Part of the [Raidex](https://raidex.app) family.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/incudex/raidex-keys/main/.github/assets/addon-window.png" width="440" alt="The addon's window: your guild's keys this week, grouped by dungeon">
@@ -40,31 +40,40 @@ This repository hosts the **releases**, the **issue tracker** and the
 
 ## What it brings
 
-- **A window** with five tabs. *Guild*: your guild's keys this week, grouped
+- **A window** with six tabs. *Guild*: your guild's keys this week, grouped
   by dungeon. *Alts*: every character's key, this week's runs, Great Vault
   and rating - an alt is in it without logging it in. *Group*: the keys of
   the group you are in. *Rating goals*: the fewest runs that lift you to 2500,
   3000 and 3500 rating, each at the lowest level that does it, and who in your
   alts, group or guild holds a key for it. *Board*: your guild's key board.
-  Left open, the window is back after a `/reload` or a loading screen.
+  *Raids*: your guild's raid calendar. Left open, the window is back after a
+  `/reload` or a loading screen.
 - **The key board**: pin your key for a day and a time, with a note such as
   "a few more keys afterwards". Guild members sign up as tank, healer or
   damage, up to ten, counted against a group of five - so you can still talk
   it over with those who come too late; a click on a name whispers them. The
   board travels through your guild's addon channel and reaches members who
   were offline when the key was pinned.
+- **The raid calendar**: the raids your guild enters in the game's calendar,
+  today and the next two weeks, with a sign-up as tank, healer or DPS and a
+  note of your own. Signing up here signs you up in the game's calendar too.
+  A raid shows who is in - counted by role, with item level and note -, its
+  difficulty and how far your guild is in it, from the guild's achievements.
+  The raid's creator, a moderator or the guild master sets anyone's role.
 - **A Mythic+ timer** while a key runs: the time left with the +2 and +3
   limits, every boss with the time it fell and your best time, the enemy
   forces to two decimals, the deaths and what they cost, and where your rating
   would land if the run ended now. After every boss your own chat says when it
-  fell; at the end the key's holder tells the group how it went.
+  fell; at the end the key's holder tells the group how it went. Nothing is
+  said at the start.
 - **A minimap button** whose tooltip shows your key, how many keys of your
   group are known and how many keys your guild has this week. A click opens
   the window, shift-click the options, ctrl-click shows or hides the timer,
   right-click links your key in the chat.
 - **Options** under *Options → AddOns → Raidex Keys*: sharing your key with
-  the guild, the window's font and size, and what the timer shows, says and
-  looks like. The addon speaks your client's language, German or English.
+  the guild, five colour themes, the fonts and sizes of the window and the
+  timer, a grid to line them up, and what the timer shows, says and looks
+  like. The addon speaks your client's language, German or English.
 
 ## Download
 
@@ -84,8 +93,9 @@ WoW saves the addon's data when you log out or type `/reload`.
 ## Your data
 
 The addon sends nothing to a server. It keeps what it records in its
-SavedVariables, a file on your own disk. The key board goes to your guild
-members' addons only, through the game's addon channel.
+SavedVariables, a file on your own disk. The key board and the raid sign-ups
+go to your guild members' addons only, through the game's addon channel; a
+raid sign-up is also set in the game's own calendar.
 
 ## Getting along with other addons
 

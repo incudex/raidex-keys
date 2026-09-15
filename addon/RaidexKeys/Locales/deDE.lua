@@ -84,9 +84,9 @@ L["While a keystone runs: time left, the +2 and +3 limits, bosses, enemy forces 
 L["Hide the game's own timer"] = "Timer des Spiels ausblenden"
 L["Only while the Raidex Keys timer shows a run."] = "Nur solange der Timer von Raidex Keys einen Lauf zeigt."
 L["Hide the quest tracker"] = "Questverfolgung ausblenden"
-L["The key's start and end in the chat"] = "Start und Ende des Keys im Chat"
-L["When the timer starts you read the key and the time it has - during a key the game keeps addons out of the group chat. At the end the key's holder tells the group how it went, once the game lets addons speak again."] =
-    "Wenn der Timer startet, liest du Key und verfügbare Zeit – während eines Keys lässt das Spiel Addons nicht in den Gruppenchat. Am Ende sagt, wer den Key hält, der Gruppe, wie es lief – sobald das Spiel Addons wieder schreiben lässt."
+L["The run's end in the group chat"] = "Ende des Laufs im Gruppenchat"
+L["At the end the key's holder tells the group how it went, once the game lets addons speak again. Only while the Mythic+ timer is shown."] =
+    "Am Ende sagt, wer den Key hält, der Gruppe, wie es lief – sobald das Spiel Addons wieder schreiben lässt. Nur solange der Mythic+-Timer angezeigt wird."
 
 L["Rating goals"] = "Zielwertung"
 L["Key holder"] = "Key bei"
@@ -144,13 +144,11 @@ L["The key of %s filled up just before you: your sign-up was taken back."] =
 L["A few more keys afterwards"] = "Danach noch ein paar Keys"
 L["A calm run, questions welcome"] = "Ruhiger Lauf, Fragen willkommen"
 L["Boss times in your chat"] = "Bosszeiten in deinem Chat"
-L["After every boss, for you alone: when it fell, and where your M+ rating would land."] =
-    "Nach jedem Boss, nur für dich: wann er gefallen ist und wo deine M+-Wertung landen würde."
-L["Raidex Keys loaded for %s"] = "Raidex Keys geladen für %s"
+L["After every boss, for you alone: when it fell, and where your M+ rating would land. Only while the Mythic+ timer is shown."] =
+    "Nach jedem Boss, nur für dich: wann er gefallen ist und wo deine M+-Wertung landen würde. Nur solange der Mythic+-Timer angezeigt wird."
 L["Well done! New keystone: %s"] = "Gut gemacht! Neuer Key: %s"
 L["Well done!"] = "Gut gemacht!"
 L["Maybe next time!"] = "Vielleicht beim nächsten Mal!"
-L["Timer started, %d minutes left – Have a great run!"] = "Timer gestartet, %d Minuten übrig – Viel Erfolg!"
 L["%s in %s minutes, projected rating: %d (+%d)"] = "%s nach %s Minuten, voraussichtliche M+-Wertung: %d (+%d)"
 L["While a keystone runs the tracked quests, campaigns and achievements go, and come back when the run ends. Untick it and the tracker stays where it was."] =
     "Während ein Keystone läuft, verschwinden die verfolgten Quests, Kampagnen und Erfolge; nach dem Lauf sind sie wieder da. Ohne Haken bleibt die Questverfolgung, wo sie ist."
@@ -180,8 +178,8 @@ L["Level in the preview"] = "Stufe in der Vorschau"
 L["The keystone level of a dungeon picked above. Your own key keeps its own level."] =
     "Die Keystone-Stufe eines oben gewählten Dungeons. Dein eigener Key behält seine Stufe."
 L["Show the affixes"] = "Affixe anzeigen"
-L["The week's affixes under the dungeon's name, two to a line."] =
-    "Die Affixe der Woche unter dem Namen des Dungeons, zwei pro Zeile."
+L["The week's affixes under the dungeon's name, running on across the card's width."] =
+    "Die Affixe der Woche unter dem Namen des Dungeons, fortlaufend über die Breite der Karte."
 L["Show what the run is worth"] = "Wert des Laufs anzeigen"
 L["The line at the foot: the rating the run would give if it ended this moment, and what that would add."] =
     "Die Zeile am Fuß: die Wertung, die der Lauf brächte, wenn er jetzt endete, und was das zusätzlich einbringt."
@@ -245,14 +243,14 @@ L["PT Sans Narrow by ParaType, SIL Open Font License"] =
     "PT Sans Narrow von ParaType, SIL Open Font License"
 
 L["Time format"] = "Uhrzeitformat"
-L["How the key board writes a posting's time. \"As the game's clock\" follows the 24-hour setting of the game's own clock."] =
-    "Wie die Pinnwand die Uhrzeit einer Pinnung schreibt. „Wie die Uhr des Spiels“ folgt der 24-Stunden-Einstellung der Uhr im Spiel."
+L["How the key board and the raid calendar write a time. \"As the game's clock\" follows the 24-hour setting of the game's own clock."] =
+    "Wie Pinnwand und Raidkalender eine Uhrzeit schreiben. „Wie die Uhr des Spiels“ folgt der 24-Stunden-Einstellung der Uhr im Spiel."
 L["As the game's clock"] = "Wie die Uhr des Spiels"
 L["24 hours (22:15)"] = "24 Stunden (22:15)"
 L["12 hours (10:15 PM)"] = "12 Stunden (10:15 PM)"
 L["Date format"] = "Datumsformat"
-L["How the key board writes a posting's day. \"As the game's language\" writes it the way the language of your game does."] =
-    "Wie die Pinnwand den Tag einer Pinnung schreibt. „Nach der Sprache des Spiels“ schreibt ihn so, wie es die Sprache deines Spiels tut."
+L["How the key board and the raid calendar write a day. \"As the game's language\" writes it the way the language of your game does."] =
+    "Wie Pinnwand und Raidkalender einen Tag schreiben. „Nach der Sprache des Spiels“ schreibt ihn so, wie es die Sprache deines Spiels tut."
 L["As the game's language"] = "Nach der Sprache des Spiels"
 L["Day.Month. (13.09.)"] = "Tag.Monat. (13.09.)"
 L["Month/Day (09/13)"] = "Monat/Tag (09/13)"
@@ -262,3 +260,36 @@ L["Click: make this your main"] = "Klick: zum Main machen"
 L["Make %s your main? The rating goals are then planned on this character's runs."] =
     "%s zum Main machen? Die Zielwertung plant dann mit den Läufen dieses Charakters."
 L["main: %s"] = "Main: %s"
+
+L["Raids"] = "Raids"
+L["Raid"] = "Raid"
+L["Signed up as"] = "Dabei als"
+L["1 raid"] = "1 Raid"
+L["%d raids"] = "%d Raids"
+L["1 raid in the calendar"] = "1 Raid im Kalender"
+L["%d raids in the calendar"] = "%d Raids im Kalender"
+L["No raids in the guild calendar"] = "Keine Raids im Gildenkalender"
+L["Raids your guild enters in the game's calendar for the next two weeks stand here, and you sign up for them as tank, healer or damage dealer."] =
+    "Raids, die deine Gilde für die nächsten zwei Wochen im Kalender des Spiels einträgt, stehen hier – und du meldest dich als Tank, Heiler oder DD dafür an."
+L["The raid calendar shows the raids of your guild's calendar."] =
+    "Der Raidkalender zeigt die Raids aus dem Kalender deiner Gilde."
+L["entered by %s"] = "eingetragen von %s"
+L["DPS"] = "DD"
+L["Name"] = "Name"
+L["Role"] = "Rolle"
+L["Item level"] = "Gegenstandsstufe"
+L["%d-%d of %d"] = "%d–%d von %d"
+L["Click: pick the role"] = "Klick: Rolle wählen"
+L["Note:"] = "Notiz:"
+L["Difficulty"] = "Schwierigkeit"
+L["Example raid instance"] = "Beispiel-Schlachtzug"
+L["Flasks and food, please"] = "Bitte Fläschchen und Essen mitbringen"
+L["I have to leave early"] = "Ich muss eher gehen"
+L["Role for %s:"] = "Rolle für %s:"
+L["Whisper"] = "Anflüstern"
+L["no role yet"] = "ohne Rolle"
+L["You can edit %s in the game's calendar: take your sign-up back there."] =
+    "%s kannst du im Kalender des Spiels bearbeiten: Nimm deine Anmeldung dort zurück."
+L["%s is locked in the game's calendar: you are signed up in Raidex Keys only."] =
+    "%s ist im Kalender des Spiels gesperrt: Du bist nur in Raidex Keys angemeldet."
+L["Example raid"] = "Beispielraid"

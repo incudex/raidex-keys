@@ -107,6 +107,34 @@ local function board(maps)
     return list
 end
 
+local RAIDS = {
+    { day = 2, minutes = 19 * 60 + 30, signups = {
+        { "T", "DEATHKNIGHT" }, { "T", "PALADIN" }, { "H", "PRIEST" }, { "H", "DRUID" }, { "H", "SHAMAN" },
+        { "D", "MAGE" }, { "D", "HUNTER" }, { "D", "ROGUE" }, { "D", "DRUID" }, { "D", "PALADIN" },
+        { "D", "SHAMAN" }, { "D", "HUNTER" }, { "D", "WARRIOR" }, { "D", "MAGE" } } },
+    { day = 7, minutes = 19 * 60 + 30, signups = {
+        { "T", "WARRIOR" }, { "H", "PALADIN" }, { "D", "MAGE" }, { "D", "ROGUE" }, { "D", "DEMONHUNTER" } } },
+}
+
+local function raids()
+    local list = {}
+    for i, entry in ipairs(RAIDS) do
+        local signups = {}
+        for n, signup in ipairs(entry.signups) do
+            local who = GUILD[(n - 1) % #GUILD + 1].name .. (n > #GUILD and tostring(n) or "")
+            signups[who] = { who = who, role = signup[1], classFile = signup[2], itemLevel = 704 - n, signedAt = n,
+                note = n == 3 and L["I have to leave early"] or nil }
+        end
+        local calendar = i == 1 and { readAt = 0, note = L["Flasks and food, please"], who = { Wellenreiter = {
+            classFile = "WARLOCK", status = Enum and Enum.CalendarStatus and Enum.CalendarStatus.Signedup or 6 } } } or nil
+        list[i] = T.Raids.Build("sample" .. i, { title = L["Example raid"], instanceName = L["Example raid instance"],
+            difficultyName = GetDifficultyInfo and GetDifficultyInfo(16) or nil,
+            at = T.BoardPane.FormTime(entry.day, entry.minutes), creator = GUILD[1].name }, signups, nil, calendar)
+        list[i].killed, list[i].bosses = 3, 8
+    end
+    return list
+end
+
 function Sample.View()
     local maps = dungeons()
     local view = { sample = true, chars = {}, party = {}, guild = { name = L["Example Guild"], keys = {} } }
@@ -154,6 +182,7 @@ function Sample.View()
     view.goalRating = CHARS[1].rating
     view.goals = T.Window.Goals(view, CHARS[1].rating, bests, BEST_CAP, names)
     view.board = board(maps)
+    view.raids = raids()
     return view
 end
 

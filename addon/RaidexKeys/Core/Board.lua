@@ -5,7 +5,6 @@ local Board = {}
 T.Board = Board
 
 local PREFIX = "RaidexKB"
-Board.PREFIX = PREFIX
 Board.MAX_APPLICANTS = 10
 Board.GROUP_SIZE = 5
 
@@ -18,7 +17,7 @@ function Board.CountText(signups)
     return ("%s%d|r/%d"):format(color, count, Board.GROUP_SIZE)
 end
 Board.NOTE_MAX = 60
-Board.KEEP_AFTER = 3 * 3600
+local KEEP_AFTER = 3 * 3600
 
 local SEND_EVERY = 1.2
 local DIGEST_AFTER_LOGIN = 20
@@ -37,6 +36,7 @@ end
 local function me()
     return fullName(Plain(UnitName("player")))
 end
+Board.FullName, Board.Me = fullName, me
 
 local function store()
     if not IsInGuild() then return nil end
@@ -64,6 +64,7 @@ local function b36(n)
 end
 
 local function num36(s) return tonumber(s or "", 36) end
+Board.B36, Board.Num36 = b36, num36
 
 local function hash(text)
     local h = 5381
@@ -110,7 +111,7 @@ local function postHead(post)
         post.removed and 1 or 0, post.note or "" }, "~")
 end
 
-function Board.PostHash(post) return hash(canonical(post)) end
+local function postHash(post) return hash(canonical(post)) end
 
 local function newer(a, textA, b, textB)
     if (a.ver or 0) ~= (b.ver or 0) then return (a.ver or 0) > (b.ver or 0) end
@@ -130,23 +131,28 @@ local function pump()
         return
     end
     if not canSend() then return end
-    local message = table.remove(queue, 1)
-    C_ChatInfo.SendAddonMessage(PREFIX, message, "GUILD")
+    local item = table.remove(queue, 1)
+    C_ChatInfo.SendAddonMessage(item.prefix, item.message, "GUILD")
 end
 
-local function enqueue(message)
-    queue[#queue + 1] = message
+local function send(prefix, message)
+    queue[#queue + 1] = { prefix = prefix, message = message }
     if not sender then
         pump()
         if #queue > 0 then sender = C_Timer.NewTicker(SEND_EVERY, pump) end
     end
+end
+Board.Send = send
+
+local function enqueue(message)
+    send(PREFIX, message)
 end
 
 local function sendBundle(post)
     local whos = {}
     for who in pairs(post.signups) do whos[#whos + 1] = who end
     table.sort(whos)
-    enqueue(table.concat({ "P", post.id, Board.PostHash(post), post.holder, post.mapId, post.level,
+    enqueue(table.concat({ "P", post.id, postHash(post), post.holder, post.mapId, post.level,
         b36(post.at), b36(post.ver), post.removed and "1" or "0", #whos, post.note or "" }, "~"))
     for i = 1, #whos, PER_MESSAGE do
         local entries = {}
@@ -158,7 +164,7 @@ local function sendBundle(post)
 end
 
 local function expired(post, now)
-    return (post.at or 0) + Board.KEEP_AFTER < (now or GetServerTime())
+    return (post.at or 0) + KEEP_AFTER <(now or GetServerTime())
 end
 
 local function purge()
@@ -171,16 +177,13 @@ end
 
 local replies, heard = {}, {}
 
-local changed
-
-local function settle()
+local function changed()
     Addon:Debounce("board", 0.5, function()
         Board:CheckOverflow()
         if T.Window then T.Window:Refresh() end
         if T.BoardPane then T.BoardPane:Refresh() end
     end)
 end
-changed = settle
 
 local function scheduleReply(id)
     if replies[id] then return end
@@ -192,7 +195,7 @@ local function scheduleReply(id)
         local post = guild and guild.posts[id]
         if not post or expired(post) then return end
         local said = heard[id]
-        if said and said.at >= since and said.hash == Board.PostHash(post) then return end
+        if said and said.at >= since and said.hash == postHash(post) then return end
         sendBundle(post)
     end)
 end
@@ -228,7 +231,7 @@ local function finishBundle(key)
     local guild = store()
     local post = guild and guild.posts[bundle.id]
     if not post then return end
-    if Board.PostHash(post) ~= bundle.hash then scheduleReply(bundle.id) end
+    if postHash(post) ~= bundle.hash then scheduleReply(bundle.id) end
 end
 
 local digests = {}
@@ -242,7 +245,7 @@ local function onDigest(from, last, list)
     local guild = store()
     if not guild then return end
     for id, post in pairs(guild.posts) do
-        if not expired(post) and seen[id] ~= Board.PostHash(post) then scheduleReply(id) end
+        if not expired(post) and seen[id] ~= postHash(post) then scheduleReply(id) end
     end
 end
 
@@ -295,7 +298,7 @@ function Board:SendDigest()
     if not guild then return end
     purge()
     local items = {}
-    for id, post in pairs(guild.posts) do items[#items + 1] = id .. ":" .. Board.PostHash(post) end
+    for id, post in pairs(guild.posts) do items[#items + 1] = id .. ":" .. postHash(post) end
     table.sort(items)
     local part = {}
     local function flush(last)
@@ -313,7 +316,7 @@ local function bump(record)
     record.ver = math.max(GetServerTime(), (record.ver or 0) + 1)
 end
 
-function Board.Applicants(post)
+local function applicantsOf(post)
     local list = {}
     for _, s in pairs(post.signups or {}) do
         if not s.removed then list[#list + 1] = s end
@@ -329,9 +332,9 @@ end
 function Board:OwnPost()
     local guild = store()
     if not guild then return nil end
-    local self = me()
+    local player = me()
     for _, post in pairs(guild.posts) do
-        if post.holder == self and not post.removed and not expired(post) then return post end
+        if post.holder == player and not post.removed and not expired(post) then return post end
     end
     return nil
 end
@@ -378,7 +381,6 @@ local function playerRole()
     end
     return "D"
 end
-Board.PlayerRole = playerRole
 
 function Board:SignUp(id, role)
     local guild = store()
@@ -386,7 +388,7 @@ function Board:SignUp(id, role)
     local player = me()
     if not post or post.removed or post.holder == player then return false end
     local mine = post.signups[player]
-    if not (mine and not mine.removed) and #Board.Applicants(post) >= Board.MAX_APPLICANTS then return false end
+    if not (mine and not mine.removed) and #applicantsOf(post) >= Board.MAX_APPLICANTS then return false end
     local classFile = UnitClassBase("player")
     local entry = mine or { who = player }
     entry.role = ROLES[role] and role or playerRole()
@@ -423,7 +425,7 @@ function Board:CheckOverflow()
         local mine = post.signups[player]
         if mine and not mine.removed and not post.removed then
             local inside = false
-            for _, s in ipairs(Board.Applicants(post)) do
+            for _, s in ipairs(applicantsOf(post)) do
                 if s.who == player then inside = true end
             end
             if not inside then
@@ -441,19 +443,19 @@ end
 function Board:View()
     local guild = store()
     if not guild then return nil end
-    local self, now, list = me(), GetServerTime(), {}
+    local player, now, list = me(), GetServerTime(), {}
     for id, post in pairs(guild.posts) do
         if not post.removed and not expired(post, now) then
-            local applicants = Board.Applicants(post)
+            local applicants = applicantsOf(post)
             local signedUp = false
             for _, s in ipairs(applicants) do
-                if s.who == self then signedUp = true end
+                if s.who == player then signedUp = true end
             end
             list[#list + 1] = {
                 id = id, holder = post.holder, name = T.Exchange.ShortName(post.holder),
                 classFile = T.Exchange:ClassOf(post.holder), mapId = post.mapId, level = post.level,
                 at = post.at, note = post.note, applicants = applicants,
-                own = post.holder == self, signedUp = signedUp,
+                own = post.holder == player, signedUp = signedUp,
             }
         end
     end
